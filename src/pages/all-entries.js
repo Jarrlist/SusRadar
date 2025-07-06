@@ -1,162 +1,5 @@
-// Core classes (same as popup.js)
-class SiteInfoProvider {
-    async getSiteInfo(url) {
-        throw new Error('getSiteInfo must be implemented');
-    }
-    
-    async addSiteInfo(url, companyId, info) {
-        throw new Error('addSiteInfo must be implemented');
-    }
-    
-    async updateSiteInfo(companyId, info) {
-        throw new Error('updateSiteInfo must be implemented');
-    }
-    
-    async deleteSiteInfo(companyId) {
-        throw new Error('deleteSiteInfo must be implemented');
-    }
-    
-    async getAllSites() {
-        throw new Error('getAllSites must be implemented');
-    }
-}
-
-class CompanyData {
-    constructor(data = {}) {
-        this.company_name = data.company_name || '';
-        this.sus_rating = data.sus_rating || 1;
-        
-        // Support both old single description and new multi-category descriptions
-        if (data.descriptions) {
-            this.descriptions = {
-                usability: data.descriptions.usability || '',
-                customer: data.descriptions.customer || '',
-                political: data.descriptions.political || ''
-            };
-        } else {
-            // Migrate old description to usability category
-            this.descriptions = {
-                usability: data.description || '',
-                customer: '',
-                political: ''
-            };
-        }
-        
-        // Default description category (usability, customer, political)
-        this.default_description = data.default_description || 'usability';
-        
-        // Keep old description field for backward compatibility
-        this.description = this.descriptions[this.default_description] || this.descriptions.usability;
-        
-        this.alternative_links = data.alternative_links || [];
-        this.date_added = data.date_added || new Date().toISOString();
-        this.user_added = data.user_added || false;
-        this.origin = data.origin || (data.user_added ? 'user' : 'susradar');
-        this.is_modified = data.is_modified || false;
-        this.original_data = data.original_data || null;
-    }
-    
-    isValid() {
-        return this.company_name.trim() !== '' && 
-               this.sus_rating >= 1 && 
-               this.sus_rating <= 5;
-    }
-    
-    getOriginLabel() {
-        if (this.origin === 'user') return '👤 User Created';
-        if (this.is_modified) return '✏️ Modified SusRadar';
-        return '🚨 SusRadar Original';
-    }
-    
-    canReset() {
-        return this.origin === 'susradar' && this.is_modified && this.original_data;
-    }
-}
-
-class LocalStorageProvider extends SiteInfoProvider {
-    constructor() {
-        super();
-        this.STORAGE_KEY = 'susradar_data';
-    }
-    
-    async _getData() {
-        return new Promise((resolve) => {
-            try {
-                chrome.storage.local.get([this.STORAGE_KEY], (result) => {
-                    if (chrome.runtime.lastError) {
-                        console.error('SusRadar: Storage get error:', chrome.runtime.lastError);
-                        resolve({
-                            url_mappings: {},
-                            company_data: {}
-                        });
-                        return;
-                    }
-                    const data = result[this.STORAGE_KEY] || {
-                        url_mappings: {},
-                        company_data: {}
-                    };
-                    resolve(data);
-                });
-            } catch (error) {
-                console.error('SusRadar: Storage access error:', error);
-                resolve({
-                    url_mappings: {},
-                    company_data: {}
-                });
-            }
-        });
-    }
-    
-    async _saveData(data) {
-        return new Promise((resolve) => {
-            try {
-                chrome.storage.local.set({[this.STORAGE_KEY]: data}, () => {
-                    if (chrome.runtime.lastError) {
-                        console.error('SusRadar: Storage set error:', chrome.runtime.lastError);
-                    }
-                    resolve();
-                });
-            } catch (error) {
-                console.error('SusRadar: Storage save error:', error);
-                resolve();
-            }
-        });
-    }
-    
-    async getAllSites() {
-        const data = await this._getData();
-        return {
-            mappings: data.url_mappings,
-            companies: data.company_data
-        };
-    }
-    
-    async updateSiteInfo(companyId, info) {
-        const data = await this._getData();
-        
-        if (data.company_data[companyId]) {
-            data.company_data[companyId] = new CompanyData(info);
-            await this._saveData(data);
-            return true;
-        }
-        return false;
-    }
-    
-    async deleteSiteInfo(companyId) {
-        const data = await this._getData();
-        
-        delete data.company_data[companyId];
-        
-        Object.keys(data.url_mappings).forEach(url => {
-            if (data.url_mappings[url] === companyId) {
-                delete data.url_mappings[url];
-            }
-        });
-        
-        await this._saveData(data);
-        return true;
-    }
-}
+// SusRadar All Entries Management
+// Uses shared modules: common.js and ui-components.js
 
 // Global variables
 let siteInfoProvider = new LocalStorageProvider();
@@ -240,24 +83,14 @@ function renderEntries() {
                     </div>
                 </div>
                 
-                <div class="entry-description-container">
-                  <div class="entry-description-tabs">
-                    <button class="entry-desc-tab ${company.default_description === 'usability' ? 'active' : ''} ${company.descriptions.usability ? '' : 'disabled'}" data-category="usability" data-company-id="${entry.id}" title="Usability & Information Quality" ${company.descriptions.usability ? '' : 'disabled'}>🖥️</button>
-                    <button class="entry-desc-tab ${company.default_description === 'customer' ? 'active' : ''} ${company.descriptions.customer ? '' : 'disabled'}" data-category="customer" data-company-id="${entry.id}" title="Customer Protection & Scam Risk" ${company.descriptions.customer ? '' : 'disabled'}>🛡️</button>
-                    <button class="entry-desc-tab ${company.default_description === 'political' ? 'active' : ''} ${company.descriptions.political ? '' : 'disabled'}" data-category="political" data-company-id="${entry.id}" title="Political & Legal Issues" ${company.descriptions.political ? '' : 'disabled'}>⚖️</button>
-                  </div>
-                  <div class="entry-description-content" id="desc-content-${entry.id}">
-                    <div class="entry-desc-content ${company.default_description === 'usability' ? 'active' : ''}" data-category="usability" data-company-id="${entry.id}">
-                      ${company.descriptions.usability ? company.descriptions.usability : ''}
-                    </div>
-                    <div class="entry-desc-content ${company.default_description === 'customer' ? 'active' : ''}" data-category="customer" data-company-id="${entry.id}">
-                      ${company.descriptions.customer ? company.descriptions.customer : ''}
-                    </div>
-                    <div class="entry-desc-content ${company.default_description === 'political' ? 'active' : ''}" data-category="political" data-company-id="${entry.id}">
-                      ${company.descriptions.political ? company.descriptions.political : ''}
-                    </div>
-                  </div>
-                </div>
+                ${SusRadarUI.createDescriptionContainer(company, {
+                  tabClass: 'entry-desc-tab',
+                  contentClass: 'entry-desc-content',
+                  idPrefix: entry.id,
+                  maxLength: null,
+                  containerClass: 'entry-description-container',
+                  tabsContainerClass: 'entry-description-tabs'
+                })}
                 
                 <div class="urls">
                     <h4>📍 Tracked URLs:</h4>
@@ -271,16 +104,7 @@ function renderEntries() {
                     </div>
                 </div>
                 
-                ${company.alternative_links && company.alternative_links.length > 0 ? `
-                    <div class="alternatives">
-                        <h4>🌟 Better Alternatives:</h4>
-                        <div class="alternatives-list">
-                            ${company.alternative_links.map(link => 
-                                `<a href="${link}" target="_blank" class="alternative-link">${new URL(link).hostname}</a>`
-                            ).join('')}
-                        </div>
-                    </div>
-                ` : ''}
+                ${SusRadarUI.createAlternativesSection(company, Infinity).replace('Better Companies:', 'Better Alternatives:').replace('susradar-alternatives', 'alternatives').replace(/<ul>/, '<div class="alternatives-list">').replace(/<\/ul>/, '</div>').replace(/<li><a/g, '<a').replace(/<\/a><\/li>/g, '</a>').replace(/class="more-alternatives"[^>]*>.*?<\/li>/g, '').replace(/class="alternative-link"/g, 'class="alternative-link"')}
             </div>
         `;
     }).join('');
@@ -347,25 +171,7 @@ function attachDescriptionTabListeners() {
 }
 
 function switchEntryDescriptionTab(category, companyId) {
-    // Update tab active states for this specific entry
-    const tabs = document.querySelectorAll(`[data-company-id="${companyId}"].entry-desc-tab`);
-    tabs.forEach(tab => {
-        if (tab.getAttribute('data-category') === category) {
-            tab.classList.add('active');
-        } else {
-            tab.classList.remove('active');
-        }
-    });
-
-    // Update content active states for this specific entry
-    const contents = document.querySelectorAll(`[data-company-id="${companyId}"].entry-desc-content`);
-    contents.forEach(content => {
-        if (content.getAttribute('data-category') === category) {
-            content.classList.add('active');
-        } else {
-            content.classList.remove('active');
-        }
-    });
+    SusRadarUI.switchEntryDescriptionTab(category, companyId);
 }
 
 function setupSearch() {
@@ -693,22 +499,11 @@ function closeEditModal() {
 }
 
 function updateEditRatingDisplay() {
-    const rating = document.getElementById('editSusRating').value;
-    document.getElementById('editRatingDisplay').textContent = rating;
+    SusRadarUI.updateRatingDisplay(document);
 }
 
 function autoResize(event) {
-    const textarea = event.target;
-    
-    // Reset height to auto to get the actual scroll height
-    textarea.style.height = 'auto';
-    
-    // Calculate the required height
-    const scrollHeight = textarea.scrollHeight;
-    const minHeight = parseInt(getComputedStyle(textarea).minHeight, 10) || 80;
-    
-    // Set the height to either scroll height or minimum height, whichever is larger
-    textarea.style.height = Math.max(scrollHeight + 4, minHeight) + 'px';
+    SusRadarUI.autoResize(event);
 }
 
 // Setup form handlers

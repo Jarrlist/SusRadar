@@ -12,22 +12,22 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background/background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"]
+      "js": ["src/components/common.js", "src/components/ui-components.js", "src/content/content.js"],
+      "css": ["src/content/content.css"]
     }
   ],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "src/pages/popup.html",
     "default_title": "SusRadar - Add to radar!"
   },
   "web_accessible_resources": [
     {
-      "resources": ["src/*", "all-entries.html", "all-entries.js"],
+      "resources": ["src/*"],
       "matches": ["<all_urls>"]
     }
   ]
