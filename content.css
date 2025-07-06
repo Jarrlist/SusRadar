@@ -144,6 +144,81 @@
   border-left: 4px solid #FFC107;
 }
 
+.susradar-description-container {
+  margin-bottom: 15px;
+}
+
+.description-tabs {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+  justify-content: center;
+}
+
+.desc-tab {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 35px;
+  height: 35px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.desc-tab:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.desc-tab.active {
+  background: rgba(255, 193, 7, 0.3);
+  border-color: #FFC107;
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
+}
+
+.desc-tab.disabled {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.desc-tab.disabled:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: none;
+}
+
+.description-content {
+  position: relative;
+  min-height: 60px;
+}
+
+.desc-content {
+  display: none;
+  font-size: 14px;
+  line-height: 1.4;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  border-radius: 8px;
+  border-left: 4px solid #FFC107;
+}
+
+.desc-content.active {
+  display: block;
+}
+
+.desc-content:empty::before {
+  content: "No information available for this category.";
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
 .susradar-alternatives {
   margin-top: 15px;
 }
@@ -307,16 +382,31 @@
   gap: 10px;
 }
 
-.rating-input input[type="range"] {
+.rating-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rating-slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rating-input input[type="range"],
+.rating-slider-wrapper input[type="range"] {
   flex: 1;
-  height: 5px;
+  height: 8px;
   background: linear-gradient(to right, #4CAF50 0%, #4CAF50 20%, #FFC107 50%, #F44336 80%, #F44336 100%);
   border-radius: 5px;
   outline: none;
   -webkit-appearance: none;
+  min-width: 120px;
 }
 
-.rating-input input[type="range"]::-webkit-slider-thumb {
+.rating-input input[type="range"]::-webkit-slider-thumb,
+.rating-slider-wrapper input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 20px;
   height: 20px;
@@ -324,13 +414,16 @@
   border-radius: 50%;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border: 2px solid #FFC107;
 }
 
-.rating-input #ratingDisplay {
+.rating-input #ratingDisplay,
+.rating-slider-wrapper #ratingDisplay {
   font-weight: bold;
   font-size: 16px;
   color: #FFC107;
   min-width: 20px;
+  text-align: center;
 }
 
 .rating-labels {
@@ -409,4 +502,74 @@
   opacity: 0.7;
   font-size: 11px !important;
   color: #FFC107 !important;
+}
+
+/* Form description tabs */
+.form-description-tabs {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+  justify-content: center;
+}
+
+.form-desc-tab {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 35px;
+  height: 35px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-desc-tab:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.form-desc-tab.active {
+  background: rgba(255, 193, 7, 0.3);
+  border-color: #FFC107;
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
+}
+
+.form-description-content {
+  position: relative;
+  min-height: 100px;
+}
+
+.form-desc-content {
+  display: none;
+}
+
+.form-desc-content.active {
+  display: block;
+}
+
+.form-desc-content textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 12px;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.form-desc-content textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.form-desc-content textarea:focus {
+  outline: none;
+  border-color: #FFC107;
+  background: rgba(255, 255, 255, 0.15);
 }

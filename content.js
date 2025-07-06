@@ -37,7 +37,29 @@ class CompanyData {
   constructor(data = {}) {
     this.company_name = data.company_name || '';
     this.sus_rating = data.sus_rating || 1;
-    this.description = data.description || '';
+    
+    // Support both old single description and new multi-category descriptions
+    if (data.descriptions) {
+      this.descriptions = {
+        usability: data.descriptions.usability || '',
+        customer: data.descriptions.customer || '',
+        political: data.descriptions.political || ''
+      };
+    } else {
+      // Migrate old description to usability category
+      this.descriptions = {
+        usability: data.description || '',
+        customer: '',
+        political: ''
+      };
+    }
+    
+    // Default description category (usability, customer, political)
+    this.default_description = data.default_description || 'usability';
+    
+    // Keep old description field for backward compatibility
+    this.description = this.descriptions[this.default_description] || this.descriptions.usability;
+    
     this.alternative_links = data.alternative_links || [];
     this.date_added = data.date_added || new Date().toISOString();
     this.user_added = data.user_added || false;
@@ -216,6 +238,12 @@ const INITIAL_DATA = {
     "meta_corp": {
       company_name: "Meta (Facebook)",
       sus_rating: 4,
+      descriptions: {
+        usability: "🕵️ Cluttered interface with endless scrolling designed to maximize engagement. Algorithmic feeds prioritize sensational content over quality information.",
+        customer: "🛡️ Aggressive data collection, privacy violations, and spreading misinformation. Has been fined billions for privacy breaches and continues to track users across the web.",
+        political: "⚖️ Lobbies against privacy regulations, facilitates election interference, and amplifies extremist content for profit while claiming neutrality."
+      },
+      default_description: "customer",
       description: "🕵️ Known for aggressive data collection, privacy violations, and spreading misinformation. Has been fined billions for privacy breaches and continues to track users across the web.",
       alternative_links: [
         "https://signal.org",
@@ -232,6 +260,12 @@ const INITIAL_DATA = {
     "x_corp": {
       company_name: "X (formerly Twitter)",
       sus_rating: 4,
+      descriptions: {
+        usability: "🎭 Chaotic interface changes, broken verification system, and algorithmic timeline manipulation that prioritizes engagement over user experience.",
+        customer: "🛡️ Platform has become increasingly problematic with content moderation issues, bot accounts, and questionable leadership decisions affecting user safety and data privacy.",
+        political: "⚖️ Amplifies misinformation, suspends journalists critical of leadership, and has become a tool for political manipulation and extremist recruitment."
+      },
+      default_description: "political",
       description: "🎭 Platform has become increasingly problematic with content moderation issues, bot accounts, and questionable leadership decisions affecting user safety and data privacy.",
       alternative_links: [
         "https://mastodon.social",
@@ -248,6 +282,12 @@ const INITIAL_DATA = {
     "bytedance": {
       company_name: "ByteDance (TikTok)",
       sus_rating: 5,
+      descriptions: {
+        usability: "🚨 Addictive design optimized for maximum screen time. Infinite scroll with algorithm that learns user weaknesses to maximize engagement over wellbeing.",
+        customer: "🛡️ Chinese-owned app with serious data privacy concerns. Collects massive amounts of user data and has potential ties to Chinese government surveillance programs.",
+        political: "⚖️ Accused of censoring content critical of China, promoting pro-China propaganda, and potentially influencing elections through algorithmic manipulation of information flow."
+      },
+      default_description: "customer",
       description: "🚨 Chinese-owned app with serious data privacy concerns. Collects massive amounts of user data and has potential ties to Chinese government surveillance programs.",
       alternative_links: [
         "https://youtube.com/shorts",
@@ -347,8 +387,23 @@ class SusRadarDropdown {
         </div>
       </div>
       
-      <div class="susradar-description">
-        ${siteInfo.description.length > 120 ? siteInfo.description.substring(0, 120) + '...' : siteInfo.description}
+      <div class="susradar-description-container">
+        <div class="description-tabs">
+          <button class="desc-tab ${siteInfo.default_description === 'usability' ? 'active' : ''} ${siteInfo.descriptions.usability ? '' : 'disabled'}" data-category="usability" title="Usability & Information Quality" ${siteInfo.descriptions.usability ? '' : 'disabled'}>🖥️</button>
+          <button class="desc-tab ${siteInfo.default_description === 'customer' ? 'active' : ''} ${siteInfo.descriptions.customer ? '' : 'disabled'}" data-category="customer" title="Customer Protection & Scam Risk" ${siteInfo.descriptions.customer ? '' : 'disabled'}>🛡️</button>
+          <button class="desc-tab ${siteInfo.default_description === 'political' ? 'active' : ''} ${siteInfo.descriptions.political ? '' : 'disabled'}" data-category="political" title="Political & Legal Issues" ${siteInfo.descriptions.political ? '' : 'disabled'}>⚖️</button>
+        </div>
+        <div class="description-content">
+          <div class="desc-content ${siteInfo.default_description === 'usability' ? 'active' : ''}" data-category="usability">
+            ${siteInfo.descriptions.usability ? (siteInfo.descriptions.usability.length > 120 ? siteInfo.descriptions.usability.substring(0, 120) + '...' : siteInfo.descriptions.usability) : ''}
+          </div>
+          <div class="desc-content ${siteInfo.default_description === 'customer' ? 'active' : ''}" data-category="customer">
+            ${siteInfo.descriptions.customer ? (siteInfo.descriptions.customer.length > 120 ? siteInfo.descriptions.customer.substring(0, 120) + '...' : siteInfo.descriptions.customer) : ''}
+          </div>
+          <div class="desc-content ${siteInfo.default_description === 'political' ? 'active' : ''}" data-category="political">
+            ${siteInfo.descriptions.political ? (siteInfo.descriptions.political.length > 120 ? siteInfo.descriptions.political.substring(0, 120) + '...' : siteInfo.descriptions.political) : ''}
+          </div>
+        </div>
       </div>
       
       ${siteInfo.alternative_links && siteInfo.alternative_links.length > 0 ? `
@@ -389,9 +444,11 @@ class SusRadarDropdown {
         
         <div class="form-group">
           <label for="susRating">Sus Rating (1-5):</label>
-          <div class="rating-input">
-            <input type="range" id="susRating" min="1" max="5" value="3">
-            <span id="ratingDisplay">3</span>
+          <div class="rating-input-container">
+            <div class="rating-slider-wrapper">
+              <input type="range" id="susRating" min="1" max="5" value="3">
+              <span id="ratingDisplay">3</span>
+            </div>
             <div class="rating-labels">
               <span>Safe</span>
               <span>Sus AF</span>
@@ -400,8 +457,23 @@ class SusRadarDropdown {
         </div>
         
         <div class="form-group">
-          <label for="descriptionInput">Description:</label>
-          <textarea id="descriptionInput" rows="3" placeholder="Why is this company sus?"></textarea>
+          <label>Description Categories:</label>
+          <div class="form-description-tabs">
+            <button type="button" class="form-desc-tab active" data-category="usability" title="Usability & Information Quality">🖥️</button>
+            <button type="button" class="form-desc-tab" data-category="customer" title="Customer Protection & Scam Risk">🛡️</button>
+            <button type="button" class="form-desc-tab" data-category="political" title="Political & Legal Issues">⚖️</button>
+          </div>
+          <div class="form-description-content">
+            <div class="form-desc-content active" data-category="usability">
+              <textarea id="usabilityInput" rows="3" placeholder="How is the site's usability? Is information presented effectively and accurately? Are there excessive ads, paywalls, or auto-generated content?"></textarea>
+            </div>
+            <div class="form-desc-content" data-category="customer">
+              <textarea id="customerInput" rows="3" placeholder="Are they selling overpriced dropshipped goods? Counterfeit products? Is this a scam? Are they exploiting customer ignorance?"></textarea>
+            </div>
+            <div class="form-desc-content" data-category="political">
+              <textarea id="politicalInput" rows="3" placeholder="Are they suing smaller companies? Lying to customers? Lobbying for harmful changes? Union busting? Environmental damage? Are they evil?"></textarea>
+            </div>
+          </div>
         </div>
         
         <div class="form-group">
@@ -456,6 +528,22 @@ class SusRadarDropdown {
     if (form) form.addEventListener('submit', (e) => this.handleFormSubmit(e));
     if (cancelBtn) cancelBtn.addEventListener('click', () => this.hideForm());
     if (ratingSlider) ratingSlider.addEventListener('input', () => this.updateRatingDisplay());
+
+    // Description tab switching (both viewing and form tabs)
+    const descTabs = this.container.querySelectorAll('.desc-tab');
+    descTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        if (!tab.disabled && !tab.classList.contains('disabled')) {
+          this.switchDescriptionTab(tab.getAttribute('data-category'));
+        }
+      });
+    });
+
+    // Form description tab switching
+    const formDescTabs = this.container.querySelectorAll('.form-desc-tab');
+    formDescTabs.forEach(tab => {
+      tab.addEventListener('click', () => this.switchFormDescriptionTab(tab.getAttribute('data-category')));
+    });
 
     // Initial rating display
     this.updateRatingDisplay();
@@ -526,6 +614,50 @@ class SusRadarDropdown {
     if (display) display.textContent = rating;
   }
 
+  switchDescriptionTab(category) {
+    // Update tab active states
+    const tabs = this.container.querySelectorAll('.desc-tab');
+    tabs.forEach(tab => {
+      if (tab.getAttribute('data-category') === category) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    // Update content active states
+    const contents = this.container.querySelectorAll('.desc-content');
+    contents.forEach(content => {
+      if (content.getAttribute('data-category') === category) {
+        content.classList.add('active');
+      } else {
+        content.classList.remove('active');
+      }
+    });
+  }
+
+  switchFormDescriptionTab(category) {
+    // Update form tab active states
+    const tabs = this.container.querySelectorAll('.form-desc-tab');
+    tabs.forEach(tab => {
+      if (tab.getAttribute('data-category') === category) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    // Update form content active states
+    const contents = this.container.querySelectorAll('.form-desc-content');
+    contents.forEach(content => {
+      if (content.getAttribute('data-category') === category) {
+        content.classList.add('active');
+      } else {
+        content.classList.remove('active');
+      }
+    });
+  }
+
   getHostname() {
     try {
       return new URL(window.location.href).hostname;
@@ -555,7 +687,15 @@ class SusRadarDropdown {
     
     const companyName = this.container.querySelector('#companyNameInput').value;
     const susRating = parseInt(this.container.querySelector('#susRating').value);
-    const description = this.container.querySelector('#descriptionInput').value;
+    
+    // Get multi-category descriptions
+    const usabilityDesc = this.container.querySelector('#usabilityInput')?.value.trim() || '';
+    const customerDesc = this.container.querySelector('#customerInput')?.value.trim() || '';
+    const politicalDesc = this.container.querySelector('#politicalInput')?.value.trim() || '';
+    
+    // For backward compatibility, use usability as main description
+    const description = usabilityDesc;
+    
     const alternativeLinks = this.container.querySelector('#alternativeLinks').value
       .split('\n')
       .map(link => link.trim())
@@ -572,10 +712,24 @@ class SusRadarDropdown {
     const existingSiteInfo = await siteInfoProvider.getSiteInfo(currentUrl);
     const isModifyingOriginal = existingSiteInfo && existingSiteInfo.origin === 'susradar' && !existingSiteInfo.is_modified;
     
+    // Determine default description based on which has content
+    let defaultDesc = 'usability';
+    if (customerDesc && !usabilityDesc && !politicalDesc) defaultDesc = 'customer';
+    else if (politicalDesc && !usabilityDesc && !customerDesc) defaultDesc = 'political';
+    else if (customerDesc && politicalDesc && !usabilityDesc) defaultDesc = 'customer';
+    else if (usabilityDesc && politicalDesc && !customerDesc) defaultDesc = 'usability';
+    else if (usabilityDesc && customerDesc && !politicalDesc) defaultDesc = 'usability';
+    
     const siteInfo = {
       company_name: companyName,
       sus_rating: susRating,
-      description: description,
+      descriptions: {
+        usability: usabilityDesc,
+        customer: customerDesc,
+        political: politicalDesc
+      },
+      default_description: defaultDesc,
+      description: description, // For backward compatibility
       alternative_links: alternativeLinks,
       date_added: existingSiteInfo ? existingSiteInfo.date_added : new Date().toISOString(),
       user_added: existingSiteInfo ? existingSiteInfo.user_added : true,
@@ -584,6 +738,8 @@ class SusRadarDropdown {
       original_data: isModifyingOriginal ? {
         company_name: existingSiteInfo.company_name,
         sus_rating: existingSiteInfo.sus_rating,
+        descriptions: existingSiteInfo.descriptions,
+        default_description: existingSiteInfo.default_description,
         description: existingSiteInfo.description,
         alternative_links: existingSiteInfo.alternative_links
       } : (existingSiteInfo ? existingSiteInfo.original_data : null)

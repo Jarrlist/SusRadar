@@ -151,6 +151,81 @@
             opacity: 0.9;
         }
 
+        .entry-description-container {
+            margin-bottom: 15px;
+        }
+
+        .entry-description-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            justify-content: center;
+        }
+
+        .entry-desc-tab {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .entry-desc-tab:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .entry-desc-tab.active {
+            background: rgba(255, 193, 7, 0.3);
+            border-color: #FFC107;
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
+        }
+
+        .entry-desc-tab.disabled {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.3);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .entry-desc-tab.disabled:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: none;
+        }
+
+        .entry-description-content {
+            position: relative;
+            min-height: 60px;
+        }
+
+        .entry-desc-content {
+            display: none;
+            font-size: 14px;
+            line-height: 1.4;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #FFC107;
+        }
+
+        .entry-desc-content.active {
+            display: block;
+        }
+
+        .entry-desc-content:empty::before {
+            content: "No information available for this category.";
+            color: rgba(255, 255, 255, 0.6);
+            font-style: italic;
+        }
+
         .urls {
             margin-bottom: 15px;
         }
@@ -427,7 +502,8 @@
         }
 
         .edit-form input,
-        .edit-form textarea {
+        .edit-form textarea,
+        .edit-form select {
             width: 100%;
             padding: 12px;
             border: 2px solid rgba(255, 255, 255, 0.3);
@@ -438,6 +514,15 @@
             box-sizing: border-box;
             transition: border-color 0.2s ease;
             resize: none;
+        }
+
+        .edit-form select {
+            cursor: pointer;
+        }
+
+        .edit-form select option {
+            background: #333;
+            color: white;
         }
 
         .edit-form textarea {
@@ -465,7 +550,8 @@
         }
 
         .edit-form input:focus,
-        .edit-form textarea:focus {
+        .edit-form textarea:focus,
+        .edit-form select:focus {
             outline: none;
             border-color: #FFC107;
             background: rgba(255, 255, 255, 0.15);
@@ -761,13 +847,50 @@
                 
                 <div class="form-group">
                     <div class="field-header">
-                        <label for="editDescription">Description:</label>
+                        <label for="editDefaultDesc">Default Description Category:</label>
                         <div class="field-controls">
-                            <span class="field-origin susradar" id="descOrigin">🚨 SusRadar</span>
-                            <button type="button" class="reset-field-btn" id="resetDesc" title="Reset to original" style="display: none;">🔄</button>
+                            <span class="field-origin susradar" id="defaultDescOrigin">🚨 SusRadar</span>
+                            <button type="button" class="reset-field-btn" id="resetDefaultDesc" title="Reset to original" style="display: none;">🔄</button>
                         </div>
                     </div>
-                    <textarea id="editDescription" placeholder="Why is this company sus?"></textarea>
+                    <select id="editDefaultDesc">
+                        <option value="usability">🖥️ Usability & Information Quality</option>
+                        <option value="customer">🛡️ Customer Protection & Scam Risk</option>
+                        <option value="political">⚖️ Political & Legal Issues</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <div class="field-header">
+                        <label for="editUsabilityDesc">🖥️ Usability & Information Quality:</label>
+                        <div class="field-controls">
+                            <span class="field-origin susradar" id="usabilityOrigin">🚨 SusRadar</span>
+                            <button type="button" class="reset-field-btn" id="resetUsability" title="Reset to original" style="display: none;">🔄</button>
+                        </div>
+                    </div>
+                    <textarea id="editUsabilityDesc" placeholder="How is the site's usability? Is information presented effectively and accurately? Are there excessive ads, paywalls, or auto-generated content?"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <div class="field-header">
+                        <label for="editCustomerDesc">🛡️ Customer Protection & Scam Risk:</label>
+                        <div class="field-controls">
+                            <span class="field-origin susradar" id="customerOrigin">🚨 SusRadar</span>
+                            <button type="button" class="reset-field-btn" id="resetCustomer" title="Reset to original" style="display: none;">🔄</button>
+                        </div>
+                    </div>
+                    <textarea id="editCustomerDesc" placeholder="Are they selling overpriced dropshipped goods? Counterfeit products? Is this a scam? Are they exploiting customer ignorance?"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <div class="field-header">
+                        <label for="editPoliticalDesc">⚖️ Political & Legal Issues:</label>
+                        <div class="field-controls">
+                            <span class="field-origin susradar" id="politicalOrigin">🚨 SusRadar</span>
+                            <button type="button" class="reset-field-btn" id="resetPolitical" title="Reset to original" style="display: none;">🔄</button>
+                        </div>
+                    </div>
+                    <textarea id="editPoliticalDesc" placeholder="Are they suing smaller companies? Lying to customers? Lobbying for harmful changes? Union busting? Environmental damage? Are they evil?"></textarea>
                 </div>
                 
                 <div class="form-group">

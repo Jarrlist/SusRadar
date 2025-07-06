@@ -25,7 +25,29 @@ class CompanyData {
     constructor(data = {}) {
         this.company_name = data.company_name || '';
         this.sus_rating = data.sus_rating || 1;
-        this.description = data.description || '';
+        
+        // Support both old single description and new multi-category descriptions
+        if (data.descriptions) {
+            this.descriptions = {
+                usability: data.descriptions.usability || '',
+                customer: data.descriptions.customer || '',
+                political: data.descriptions.political || ''
+            };
+        } else {
+            // Migrate old description to usability category
+            this.descriptions = {
+                usability: data.description || '',
+                customer: '',
+                political: ''
+            };
+        }
+        
+        // Default description category (usability, customer, political)
+        this.default_description = data.default_description || 'usability';
+        
+        // Keep old description field for backward compatibility
+        this.description = this.descriptions[this.default_description] || this.descriptions.usability;
+        
         this.alternative_links = data.alternative_links || [];
         this.date_added = data.date_added || new Date().toISOString();
         this.user_added = data.user_added || false;
@@ -218,7 +240,24 @@ function renderEntries() {
                     </div>
                 </div>
                 
-                <div class="description">${company.description}</div>
+                <div class="entry-description-container">
+                  <div class="entry-description-tabs">
+                    <button class="entry-desc-tab ${company.default_description === 'usability' ? 'active' : ''} ${company.descriptions.usability ? '' : 'disabled'}" data-category="usability" data-company-id="${entry.id}" title="Usability & Information Quality" ${company.descriptions.usability ? '' : 'disabled'}>🖥️</button>
+                    <button class="entry-desc-tab ${company.default_description === 'customer' ? 'active' : ''} ${company.descriptions.customer ? '' : 'disabled'}" data-category="customer" data-company-id="${entry.id}" title="Customer Protection & Scam Risk" ${company.descriptions.customer ? '' : 'disabled'}>🛡️</button>
+                    <button class="entry-desc-tab ${company.default_description === 'political' ? 'active' : ''} ${company.descriptions.political ? '' : 'disabled'}" data-category="political" data-company-id="${entry.id}" title="Political & Legal Issues" ${company.descriptions.political ? '' : 'disabled'}>⚖️</button>
+                  </div>
+                  <div class="entry-description-content" id="desc-content-${entry.id}">
+                    <div class="entry-desc-content ${company.default_description === 'usability' ? 'active' : ''}" data-category="usability" data-company-id="${entry.id}">
+                      ${company.descriptions.usability ? company.descriptions.usability : ''}
+                    </div>
+                    <div class="entry-desc-content ${company.default_description === 'customer' ? 'active' : ''}" data-category="customer" data-company-id="${entry.id}">
+                      ${company.descriptions.customer ? company.descriptions.customer : ''}
+                    </div>
+                    <div class="entry-desc-content ${company.default_description === 'political' ? 'active' : ''}" data-category="political" data-company-id="${entry.id}">
+                      ${company.descriptions.political ? company.descriptions.political : ''}
+                    </div>
+                  </div>
+                </div>
                 
                 <div class="urls">
                     <h4>📍 Tracked URLs:</h4>
@@ -248,6 +287,9 @@ function renderEntries() {
     
     // Attach event listeners to action buttons
     attachActionListeners();
+    
+    // Attach event listeners to description tabs
+    attachDescriptionTabListeners();
 }
 
 function attachActionListeners() {
@@ -286,6 +328,43 @@ function attachActionListeners() {
             const companyId = button.getAttribute('data-company-id');
             removeUrlFromEntry(companyId, url);
         });
+    });
+}
+
+function attachDescriptionTabListeners() {
+    document.querySelectorAll('.entry-desc-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (!tab.disabled && !tab.classList.contains('disabled')) {
+                const category = tab.getAttribute('data-category');
+                const companyId = tab.getAttribute('data-company-id');
+                switchEntryDescriptionTab(category, companyId);
+            }
+        });
+    });
+}
+
+function switchEntryDescriptionTab(category, companyId) {
+    // Update tab active states for this specific entry
+    const tabs = document.querySelectorAll(`[data-company-id="${companyId}"].entry-desc-tab`);
+    tabs.forEach(tab => {
+        if (tab.getAttribute('data-category') === category) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
+        }
+    });
+
+    // Update content active states for this specific entry
+    const contents = document.querySelectorAll(`[data-company-id="${companyId}"].entry-desc-content`);
+    contents.forEach(content => {
+        if (content.getAttribute('data-category') === category) {
+            content.classList.add('active');
+        } else {
+            content.classList.remove('active');
+        }
     });
 }
 
@@ -369,7 +448,10 @@ async function editEntry(companyId) {
     document.getElementById('modalTitle').textContent = `Edit ${company.company_name}`;
     document.getElementById('editCompanyName').value = company.company_name;
     document.getElementById('editSusRating').value = company.sus_rating;
-    document.getElementById('editDescription').value = company.description;
+    document.getElementById('editDefaultDesc').value = company.default_description || 'usability';
+    document.getElementById('editUsabilityDesc').value = company.descriptions.usability;
+    document.getElementById('editCustomerDesc').value = company.descriptions.customer;
+    document.getElementById('editPoliticalDesc').value = company.descriptions.political;
     document.getElementById('editAlternatives').value = company.alternative_links.join('\n');
     
     // Update field origins and reset buttons
@@ -383,7 +465,9 @@ async function editEntry(companyId) {
     
     // Auto-resize textareas on open
     setTimeout(() => {
-        autoResize({ target: document.getElementById('editDescription') });
+        autoResize({ target: document.getElementById('editUsabilityDesc') });
+        autoResize({ target: document.getElementById('editCustomerDesc') });
+        autoResize({ target: document.getElementById('editPoliticalDesc') });
         autoResize({ target: document.getElementById('editAlternatives') });
         document.getElementById('editCompanyName').focus();
     }, 100);
@@ -395,7 +479,10 @@ function updateFieldOrigins(company) {
     // Update origin badges and reset buttons
     updateFieldOrigin('nameOrigin', 'resetName', company.origin, hasOriginal, 'name');
     updateFieldOrigin('ratingOrigin', 'resetRating', company.origin, hasOriginal, 'rating');
-    updateFieldOrigin('descOrigin', 'resetDesc', company.origin, hasOriginal, 'description');
+    updateFieldOrigin('defaultDescOrigin', 'resetDefaultDesc', company.origin, hasOriginal, 'defaultDesc');
+    updateFieldOrigin('usabilityOrigin', 'resetUsability', company.origin, hasOriginal, 'usability');
+    updateFieldOrigin('customerOrigin', 'resetCustomer', company.origin, hasOriginal, 'customer');
+    updateFieldOrigin('politicalOrigin', 'resetPolitical', company.origin, hasOriginal, 'political');
     updateFieldOrigin('altOrigin', 'resetAlt', company.origin, hasOriginal, 'alternatives');
     
     // Show reset all button if there's original data
@@ -447,8 +534,14 @@ function checkFieldModified(fieldName) {
             return current.company_name !== originalCompanyData.company_name;
         case 'rating':
             return current.sus_rating !== originalCompanyData.sus_rating;
-        case 'description':
-            return current.description !== originalCompanyData.description;
+        case 'defaultDesc':
+            return current.default_description !== (originalCompanyData.default_description || 'usability');
+        case 'usability':
+            return current.descriptions.usability !== (originalCompanyData.descriptions ? originalCompanyData.descriptions.usability : originalCompanyData.description || '');
+        case 'customer':
+            return current.descriptions.customer !== (originalCompanyData.descriptions ? originalCompanyData.descriptions.customer : '');
+        case 'political':
+            return current.descriptions.political !== (originalCompanyData.descriptions ? originalCompanyData.descriptions.political : '');
         case 'alternatives':
             return JSON.stringify(current.alternative_links) !== JSON.stringify(originalCompanyData.alternative_links);
         default:
@@ -467,9 +560,18 @@ function checkCurrentFormFieldModified(fieldName) {
         case 'rating':
             const currentRating = parseInt(document.getElementById('editSusRating').value);
             return currentRating !== originalCompanyData.sus_rating;
-        case 'description':
-            const currentDesc = document.getElementById('editDescription').value.trim();
-            return currentDesc !== originalCompanyData.description;
+        case 'defaultDesc':
+            const currentDefaultDesc = document.getElementById('editDefaultDesc').value;
+            return currentDefaultDesc !== (originalCompanyData.default_description || 'usability');
+        case 'usability':
+            const currentUsability = document.getElementById('editUsabilityDesc').value.trim();
+            return currentUsability !== (originalCompanyData.descriptions ? originalCompanyData.descriptions.usability : originalCompanyData.description || '');
+        case 'customer':
+            const currentCustomer = document.getElementById('editCustomerDesc').value.trim();
+            return currentCustomer !== (originalCompanyData.descriptions ? originalCompanyData.descriptions.customer : '');
+        case 'political':
+            const currentPolitical = document.getElementById('editPoliticalDesc').value.trim();
+            return currentPolitical !== (originalCompanyData.descriptions ? originalCompanyData.descriptions.political : '');
         case 'alternatives':
             const currentAlts = document.getElementById('editAlternatives').value
                 .split('\n')
@@ -493,11 +595,14 @@ function updateFieldIndicators() {
         // Update each field indicator based on current form values
         updateFieldIndicator('nameOrigin', 'resetName', 'name');
         updateFieldIndicator('ratingOrigin', 'resetRating', 'rating');
-        updateFieldIndicator('descOrigin', 'resetDesc', 'description');
+        updateFieldIndicator('defaultDescOrigin', 'resetDefaultDesc', 'defaultDesc');
+        updateFieldIndicator('usabilityOrigin', 'resetUsability', 'usability');
+        updateFieldIndicator('customerOrigin', 'resetCustomer', 'customer');
+        updateFieldIndicator('politicalOrigin', 'resetPolitical', 'political');
         updateFieldIndicator('altOrigin', 'resetAlt', 'alternatives');
         
         // Update reset all button
-        const anyFieldModified = ['name', 'rating', 'description', 'alternatives'].some(field => 
+        const anyFieldModified = ['name', 'rating', 'defaultDesc', 'usability', 'customer', 'political', 'alternatives'].some(field => 
             checkCurrentFormFieldModified(field)
         );
         const resetAllBtn = document.getElementById('resetAllBtn');
@@ -532,9 +637,20 @@ function resetField(fieldType) {
             document.getElementById('editSusRating').value = originalCompanyData.sus_rating;
             updateEditRatingDisplay();
             break;
-        case 'description':
-            document.getElementById('editDescription').value = originalCompanyData.description;
-            autoResize({ target: document.getElementById('editDescription') });
+        case 'defaultDesc':
+            document.getElementById('editDefaultDesc').value = originalCompanyData.default_description || 'usability';
+            break;
+        case 'usability':
+            document.getElementById('editUsabilityDesc').value = originalCompanyData.descriptions ? originalCompanyData.descriptions.usability : originalCompanyData.description || '';
+            autoResize({ target: document.getElementById('editUsabilityDesc') });
+            break;
+        case 'customer':
+            document.getElementById('editCustomerDesc').value = originalCompanyData.descriptions ? originalCompanyData.descriptions.customer : '';
+            autoResize({ target: document.getElementById('editCustomerDesc') });
+            break;
+        case 'political':
+            document.getElementById('editPoliticalDesc').value = originalCompanyData.descriptions ? originalCompanyData.descriptions.political : '';
+            autoResize({ target: document.getElementById('editPoliticalDesc') });
             break;
         case 'alternatives':
             document.getElementById('editAlternatives').value = originalCompanyData.alternative_links.join('\n');
@@ -552,12 +668,17 @@ function resetAllFields() {
     if (confirm('Reset all fields to original SusRadar values?')) {
         document.getElementById('editCompanyName').value = originalCompanyData.company_name;
         document.getElementById('editSusRating').value = originalCompanyData.sus_rating;
-        document.getElementById('editDescription').value = originalCompanyData.description;
+        document.getElementById('editDefaultDesc').value = originalCompanyData.default_description || 'usability';
+        document.getElementById('editUsabilityDesc').value = originalCompanyData.descriptions ? originalCompanyData.descriptions.usability : originalCompanyData.description || '';
+        document.getElementById('editCustomerDesc').value = originalCompanyData.descriptions ? originalCompanyData.descriptions.customer : '';
+        document.getElementById('editPoliticalDesc').value = originalCompanyData.descriptions ? originalCompanyData.descriptions.political : '';
         document.getElementById('editAlternatives').value = originalCompanyData.alternative_links.join('\n');
         updateEditRatingDisplay();
         
         // Auto-resize textareas after reset
-        autoResize({ target: document.getElementById('editDescription') });
+        autoResize({ target: document.getElementById('editUsabilityDesc') });
+        autoResize({ target: document.getElementById('editCustomerDesc') });
+        autoResize({ target: document.getElementById('editPoliticalDesc') });
         autoResize({ target: document.getElementById('editAlternatives') });
         
         // Update all field indicators
@@ -621,18 +742,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Field reset handlers
     document.getElementById('resetName').addEventListener('click', () => resetField('name'));
     document.getElementById('resetRating').addEventListener('click', () => resetField('rating'));
-    document.getElementById('resetDesc').addEventListener('click', () => resetField('description'));
+    document.getElementById('resetDefaultDesc').addEventListener('click', () => resetField('defaultDesc'));
+    document.getElementById('resetUsability').addEventListener('click', () => resetField('usability'));
+    document.getElementById('resetCustomer').addEventListener('click', () => resetField('customer'));
+    document.getElementById('resetPolitical').addEventListener('click', () => resetField('political'));
     document.getElementById('resetAlt').addEventListener('click', () => resetField('alternatives'));
     document.getElementById('resetAllBtn').addEventListener('click', resetAllFields);
     
     // Auto-resize textareas
-    document.getElementById('editDescription').addEventListener('input', autoResize);
+    document.getElementById('editUsabilityDesc').addEventListener('input', autoResize);
+    document.getElementById('editCustomerDesc').addEventListener('input', autoResize);
+    document.getElementById('editPoliticalDesc').addEventListener('input', autoResize);
     document.getElementById('editAlternatives').addEventListener('input', autoResize);
     
     // Real-time field modification detection
     document.getElementById('editCompanyName').addEventListener('input', () => updateFieldIndicators());
     document.getElementById('editSusRating').addEventListener('input', () => updateFieldIndicators());
-    document.getElementById('editDescription').addEventListener('input', () => updateFieldIndicators());
+    document.getElementById('editDefaultDesc').addEventListener('change', () => updateFieldIndicators());
+    document.getElementById('editUsabilityDesc').addEventListener('input', () => updateFieldIndicators());
+    document.getElementById('editCustomerDesc').addEventListener('input', () => updateFieldIndicators());
+    document.getElementById('editPoliticalDesc').addEventListener('input', () => updateFieldIndicators());
     document.getElementById('editAlternatives').addEventListener('input', () => updateFieldIndicators());
 });
 
@@ -647,7 +776,10 @@ async function saveEditForm() {
     // Get form values
     const newName = document.getElementById('editCompanyName').value.trim();
     const newRating = parseInt(document.getElementById('editSusRating').value);
-    const newDescription = document.getElementById('editDescription').value.trim();
+    const newDefaultDesc = document.getElementById('editDefaultDesc').value;
+    const newUsabilityDesc = document.getElementById('editUsabilityDesc').value.trim();
+    const newCustomerDesc = document.getElementById('editCustomerDesc').value.trim();
+    const newPoliticalDesc = document.getElementById('editPoliticalDesc').value.trim();
     const newAlternatives = document.getElementById('editAlternatives').value
         .split('\n')
         .map(link => link.trim())
@@ -677,6 +809,11 @@ async function saveEditForm() {
             originalData = {
                 company_name: company.company_name,
                 sus_rating: company.sus_rating,
+                descriptions: {
+                    usability: company.descriptions.usability,
+                    customer: company.descriptions.customer,
+                    political: company.descriptions.political
+                },
                 description: company.description,
                 alternative_links: company.alternative_links
             };
@@ -684,10 +821,17 @@ async function saveEditForm() {
         
         // Check if new values differ from original values
         if (originalData) {
+            const originalUsability = originalData.descriptions ? originalData.descriptions.usability : originalData.description || '';
+            const originalCustomer = originalData.descriptions ? originalData.descriptions.customer : '';
+            const originalPolitical = originalData.descriptions ? originalData.descriptions.political : '';
+            
             isCurrentlyModified = (
                 newName !== originalData.company_name ||
                 newRating !== originalData.sus_rating ||
-                newDescription !== originalData.description ||
+                newDefaultDesc !== (originalData.default_description || 'usability') ||
+                newUsabilityDesc !== originalUsability ||
+                newCustomerDesc !== originalCustomer ||
+                newPoliticalDesc !== originalPolitical ||
                 JSON.stringify(newAlternatives) !== JSON.stringify(originalData.alternative_links)
             );
         }
@@ -696,7 +840,13 @@ async function saveEditForm() {
     const updatedInfo = {
         company_name: newName,
         sus_rating: newRating,
-        description: newDescription,
+        descriptions: {
+            usability: newUsabilityDesc,
+            customer: newCustomerDesc,
+            political: newPoliticalDesc
+        },
+        default_description: newDefaultDesc,
+        description: newUsabilityDesc, // Keep for backward compatibility
         alternative_links: newAlternatives,
         date_added: company.date_added,
         user_added: company.user_added,
@@ -746,7 +896,12 @@ async function resetEntry(companyId) {
     const resetInfo = {
         company_name: originalData.company_name,
         sus_rating: originalData.sus_rating,
-        description: originalData.description,
+        descriptions: originalData.descriptions || {
+            usability: originalData.description || '',
+            customer: '',
+            political: ''
+        },
+        description: originalData.description || '',
         alternative_links: originalData.alternative_links,
         date_added: entry.company.date_added,
         user_added: false,
