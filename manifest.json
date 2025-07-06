@@ -27,7 +27,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["src/*"],
+      "resources": ["src/*", "all-entries.html", "all-entries.js"],
       "matches": ["<all_urls>"]
     }
   ]

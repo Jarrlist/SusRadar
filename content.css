@@ -28,6 +28,35 @@
   margin-bottom: 15px;
 }
 
+.control-buttons {
+  display: flex;
+  gap: 5px;
+  margin-left: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.control-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
 .susradar-company-name {
   font-size: 18px;
   font-weight: bold;
@@ -45,6 +74,10 @@
   font-size: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .susradar-close:hover {
@@ -59,7 +92,7 @@
 .susradar-rating-bar {
   position: relative;
   height: 20px;
-  background: linear-gradient(to right, #4CAF50 0%, #FFC107 50%, #F44336 100%);
+  background: linear-gradient(to right, #4CAF50 0%, #4CAF50 20%, #FFC107 50%, #F44336 80%, #F44336 100%);
   border-radius: 10px;
   margin-bottom: 5px;
   overflow: hidden;
@@ -174,4 +207,206 @@
 
 .susradar-rating-dial {
   animation: susradar-bounce 2s infinite;
+}
+
+/* Form button styles */
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: #4CAF50;
+  color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  border: 2px solid #45a049;
+}
+
+.btn-primary:hover {
+  background: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  border: 2px solid #5a6268;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.form-container {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-top: 15px;
+}
+
+.form-container h3 {
+  margin: 0 0 15px 0;
+  color: #FFC107;
+  font-size: 16px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #E8EAF6;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #FFC107;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.rating-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rating-input input[type="range"] {
+  flex: 1;
+  height: 5px;
+  background: linear-gradient(to right, #4CAF50 0%, #4CAF50 20%, #FFC107 50%, #F44336 80%, #F44336 100%);
+  border-radius: 5px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.rating-input input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.rating-input #ratingDisplay {
+  font-weight: bold;
+  font-size: 16px;
+  color: #FFC107;
+  min-width: 20px;
+}
+
+.rating-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  width: 100%;
+  margin-top: 5px;
+}
+
+.rating-labels span:first-child {
+  color: #4CAF50;
+}
+
+.rating-labels span:last-child {
+  color: #F44336;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.form-actions .btn {
+  flex: 1;
+}
+
+.not-tracked-message {
+  text-align: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+}
+
+.not-tracked-message p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+/* Origin and manage styles */
+.susradar-origin-info {
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.origin-label {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #FFC107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.susradar-manage-hint {
+  margin-top: 15px;
+  text-align: center;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+.susradar-manage-hint p {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.8;
+  color: #E8EAF6;
+}
+
+.more-alternatives {
+  font-style: italic;
+  opacity: 0.7;
+  font-size: 11px !important;
+  color: #FFC107 !important;
 }

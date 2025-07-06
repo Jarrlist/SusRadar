@@ -1,6 +1,566 @@
+// Core interfaces
+class SiteInfoProvider {
+  async getSiteInfo(url) {
+    throw new Error('getSiteInfo must be implemented');
+  }
+  
+  async addSiteInfo(url, companyId, info) {
+    throw new Error('addSiteInfo must be implemented');
+  }
+  
+  async updateSiteInfo(companyId, info) {
+    throw new Error('updateSiteInfo must be implemented');
+  }
+  
+  async deleteSiteInfo(companyId) {
+    throw new Error('deleteSiteInfo must be implemented');
+  }
+  
+  async getAllSites() {
+    throw new Error('getAllSites must be implemented');
+  }
+}
+
+class URLMatcher {
+  findMatch(currentUrl, urlMappings) {
+    throw new Error('findMatch must be implemented');
+  }
+}
+
+class CompanyData {
+  constructor(data = {}) {
+    this.company_name = data.company_name || '';
+    this.sus_rating = data.sus_rating || 1;
+    this.description = data.description || '';
+    this.alternative_links = data.alternative_links || [];
+    this.date_added = data.date_added || new Date().toISOString();
+    this.user_added = data.user_added || false;
+    this.origin = data.origin || (data.user_added ? 'user' : 'susradar');
+    this.is_modified = data.is_modified || false;
+    this.original_data = data.original_data || null;
+  }
+  
+  isValid() {
+    return this.company_name.trim() !== '' && 
+           this.sus_rating >= 1 && 
+           this.sus_rating <= 5;
+  }
+  
+  getOriginLabel() {
+    if (this.origin === 'user') return '👤 User Created';
+    if (this.is_modified) return '✏️ Modified SusRadar';
+    return '🚨 SusRadar Original';
+  }
+}
+
+// URL Matcher
+class ExactMatcher extends URLMatcher {
+  findMatch(currentUrl, urlMappings) {
+    const cleanUrl = this._cleanUrl(currentUrl);
+    
+    for (const [mappedUrl, companyId] of Object.entries(urlMappings)) {
+      const cleanMappedUrl = this._cleanUrl(mappedUrl);
+      if (cleanMappedUrl === cleanUrl) {
+        return companyId;
+      }
+    }
+    
+    return null;
+  }
+  
+  _cleanUrl(url) {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname.toLowerCase().replace(/^www\./, '');
+    } catch (e) {
+      return url.toLowerCase().replace(/^www\./, '');
+    }
+  }
+}
+
+// Local Storage Provider
+class LocalStorageProvider extends SiteInfoProvider {
+  constructor() {
+    super();
+    this.STORAGE_KEY = 'susradar_data';
+  }
+  
+  async _getData() {
+    return new Promise((resolve) => {
+      try {
+        chrome.storage.local.get([this.STORAGE_KEY], (result) => {
+          if (chrome.runtime.lastError) {
+            console.error('SusRadar: Storage get error:', chrome.runtime.lastError);
+            resolve({
+              url_mappings: {},
+              company_data: {}
+            });
+            return;
+          }
+          const data = result[this.STORAGE_KEY] || {
+            url_mappings: {},
+            company_data: {}
+          };
+          resolve(data);
+        });
+      } catch (error) {
+        console.error('SusRadar: Storage access error:', error);
+        resolve({
+          url_mappings: {},
+          company_data: {}
+        });
+      }
+    });
+  }
+  
+  async _saveData(data) {
+    return new Promise((resolve) => {
+      try {
+        chrome.storage.local.set({[this.STORAGE_KEY]: data}, () => {
+          if (chrome.runtime.lastError) {
+            console.error('SusRadar: Storage set error:', chrome.runtime.lastError);
+          }
+          resolve();
+        });
+      } catch (error) {
+        console.error('SusRadar: Storage save error:', error);
+        resolve();
+      }
+    });
+  }
+  
+  async getSiteInfo(url) {
+    const data = await this._getData();
+    const matcher = new ExactMatcher();
+    const companyId = matcher.findMatch(url, data.url_mappings);
+    
+    if (companyId && data.company_data[companyId]) {
+      return new CompanyData(data.company_data[companyId]);
+    }
+    return null;
+  }
+  
+  async addSiteInfo(url, companyId, info) {
+    const data = await this._getData();
+    
+    data.url_mappings[url] = companyId;
+    data.company_data[companyId] = new CompanyData(info);
+    
+    await this._saveData(data);
+    return true;
+  }
+  
+  async updateSiteInfo(companyId, info) {
+    const data = await this._getData();
+    
+    if (data.company_data[companyId]) {
+      data.company_data[companyId] = new CompanyData(info);
+      await this._saveData(data);
+      return true;
+    }
+    return false;
+  }
+  
+  async deleteSiteInfo(companyId) {
+    const data = await this._getData();
+    
+    delete data.company_data[companyId];
+    
+    Object.keys(data.url_mappings).forEach(url => {
+      if (data.url_mappings[url] === companyId) {
+        delete data.url_mappings[url];
+      }
+    });
+    
+    await this._saveData(data);
+    return true;
+  }
+  
+  async getAllSites() {
+    const data = await this._getData();
+    return {
+      mappings: data.url_mappings,
+      companies: data.company_data
+    };
+  }
+}
+
+// Initial data
+const INITIAL_DATA = {
+  url_mappings: {
+    "facebook.com": "meta_corp",
+    "www.facebook.com": "meta_corp",
+    "instagram.com": "meta_corp",
+    "www.instagram.com": "meta_corp",
+    "whatsapp.com": "meta_corp",
+    "www.whatsapp.com": "meta_corp",
+    "twitter.com": "x_corp",
+    "www.twitter.com": "x_corp",
+    "x.com": "x_corp",
+    "www.x.com": "x_corp",
+    "tiktok.com": "bytedance",
+    "www.tiktok.com": "bytedance"
+  },
+  company_data: {
+    "meta_corp": {
+      company_name: "Meta (Facebook)",
+      sus_rating: 4,
+      description: "🕵️ Known for aggressive data collection, privacy violations, and spreading misinformation. Has been fined billions for privacy breaches and continues to track users across the web.",
+      alternative_links: [
+        "https://signal.org",
+        "https://mastodon.social",
+        "https://diasporafoundation.org",
+        "https://element.io"
+      ],
+      date_added: "2024-01-01T00:00:00.000Z",
+      user_added: false,
+      origin: "susradar",
+      is_modified: false,
+      original_data: null
+    },
+    "x_corp": {
+      company_name: "X (formerly Twitter)",
+      sus_rating: 4,
+      description: "🎭 Platform has become increasingly problematic with content moderation issues, bot accounts, and questionable leadership decisions affecting user safety and data privacy.",
+      alternative_links: [
+        "https://mastodon.social",
+        "https://bsky.app",
+        "https://threads.net",
+        "https://counter.social"
+      ],
+      date_added: "2024-01-01T00:00:00.000Z",
+      user_added: false,
+      origin: "susradar",
+      is_modified: false,
+      original_data: null
+    },
+    "bytedance": {
+      company_name: "ByteDance (TikTok)",
+      sus_rating: 5,
+      description: "🚨 Chinese-owned app with serious data privacy concerns. Collects massive amounts of user data and has potential ties to Chinese government surveillance programs.",
+      alternative_links: [
+        "https://youtube.com/shorts",
+        "https://instagram.com/reels",
+        "https://triller.co",
+        "https://byte.co"
+      ],
+      date_added: "2024-01-01T00:00:00.000Z",
+      user_added: false,
+      origin: "susradar",
+      is_modified: false,
+      original_data: null
+    }
+  }
+};
+
+// Unified Dropdown Component
+class SusRadarDropdown {
+  constructor(container, isPopup = false) {
+    this.container = container;
+    this.isPopup = isPopup;
+    this.currentSiteInfo = null;
+  }
+
+  createHTML(siteInfo) {
+    const isTracked = !!siteInfo;
+    
+    return `
+      <div class="susradar-header">
+        <h3 class="susradar-company-name">${isTracked ? siteInfo.company_name : this.getHostname()}</h3>
+        <div class="control-buttons">
+          ${isTracked ? '<button class="control-btn manage-btn" title="Manage Entry">⚙️</button>' : '<button class="control-btn add-btn" title="Add to Radar">➕</button>'}
+          ${!isTracked ? '<button class="control-btn all-entries-btn" title="Manage All Entries">⚙️</button>' : ''}
+          <button class="susradar-close" title="Close">✕</button>
+        </div>
+      </div>
+      
+      <div class="site-content">
+        ${isTracked ? this.createTrackedContent(siteInfo) : this.createNotTrackedContent()}
+      </div>
+      
+      <div class="form-container" id="addSiteForm" style="display: none;">
+        ${this.createFormHTML()}
+      </div>
+      
+    `;
+  }
+
+  createTrackedContent(siteInfo) {
+    return `
+      <div class="susradar-origin-info">
+        <span class="origin-label">${siteInfo.getOriginLabel()}</span>
+      </div>
+      
+      <div class="susradar-rating-container">
+        <div class="susradar-rating-bar">
+          <div class="susradar-rating-fill" style="width: ${(siteInfo.sus_rating / 5) * 100}%"></div>
+          <div class="susradar-rating-dial" style="left: ${(siteInfo.sus_rating / 5) * 100}%"></div>
+        </div>
+        <div class="susradar-rating-labels">
+          <span class="susradar-safe">Safe</span>
+          <span class="susradar-sus">Sus AF (${siteInfo.sus_rating}/5)</span>
+        </div>
+      </div>
+      
+      <div class="susradar-description">
+        ${siteInfo.description.length > 120 ? siteInfo.description.substring(0, 120) + '...' : siteInfo.description}
+      </div>
+      
+      ${siteInfo.alternative_links && siteInfo.alternative_links.length > 0 ? `
+        <div class="susradar-alternatives">
+          <h4>🌟 Better Companies:</h4>
+          <ul>
+            ${siteInfo.alternative_links.slice(0, 3).map(link => `
+              <li><a href="${link}" target="_blank">${link}</a></li>
+            `).join('')}
+            ${siteInfo.alternative_links.length > 3 ? '<li class="more-alternatives">+ more in management page</li>' : ''}
+          </ul>
+        </div>
+      ` : ''}
+      
+      <div class="susradar-manage-hint">
+        <p>Click ⚙️ to edit or manage this entry</p>
+      </div>
+    `;
+  }
+
+  createNotTrackedContent() {
+    return `
+      <div class="not-tracked-message">
+        <p>🔍 Site not tracked yet</p>
+        <p>Click ➕ to add to radar!</p>
+      </div>
+    `;
+  }
+
+  createFormHTML() {
+    return `
+      <h3>Add Site to Radar</h3>
+      <form id="siteForm">
+        <div class="form-group">
+          <label for="companyNameInput">Company Name:</label>
+          <input type="text" id="companyNameInput" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="susRating">Sus Rating (1-5):</label>
+          <div class="rating-input">
+            <input type="range" id="susRating" min="1" max="5" value="3">
+            <span id="ratingDisplay">3</span>
+            <div class="rating-labels">
+              <span>Safe</span>
+              <span>Sus AF</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="descriptionInput">Description:</label>
+          <textarea id="descriptionInput" rows="3" placeholder="Why is this company sus?"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="alternativeLinks">Alternative Links (one per line):</label>
+          <textarea id="alternativeLinks" rows="2" placeholder="https://better-alternative.com"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="additionalUrls">Additional URLs for this company:</label>
+          <textarea id="additionalUrls" rows="2" placeholder="https://another-site.com (optional)"></textarea>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="cancel-btn btn btn-secondary">Cancel</button>
+        </div>
+      </form>
+    `;
+  }
+
+  getHostname() {
+    // For popup, we need to get the hostname from the current tab
+    // This will be set by the render method
+    return this.currentHostname || 'Current Site';
+  }
+
+  render(siteInfo) {
+    this.currentSiteInfo = siteInfo;
+    this.container.innerHTML = this.createHTML(siteInfo);
+    this.attachEventListeners();
+  }
+
+  attachEventListeners() {
+    // Control buttons
+    const addBtn = this.container.querySelector('.add-btn');
+    const manageBtn = this.container.querySelector('.manage-btn');
+    const allEntriesBtn = this.container.querySelector('.all-entries-btn');
+    const closeBtn = this.container.querySelector('.susradar-close');
+
+    if (addBtn) addBtn.addEventListener('click', () => this.showAddForm());
+    if (manageBtn) manageBtn.addEventListener('click', () => this.openManagePage());
+    if (allEntriesBtn) allEntriesBtn.addEventListener('click', () => this.showAllSites());
+    if (closeBtn) closeBtn.addEventListener('click', () => this.close());
+
+    // Form buttons
+    const form = this.container.querySelector('#siteForm');
+    const cancelBtn = this.container.querySelector('.cancel-btn');
+    const ratingSlider = this.container.querySelector('#susRating');
+
+    if (form) form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+    if (cancelBtn) cancelBtn.addEventListener('click', () => this.hideForm());
+    if (ratingSlider) ratingSlider.addEventListener('input', () => this.updateRatingDisplay());
+
+    // Initial rating display
+    this.updateRatingDisplay();
+  }
+
+  showAddForm() {
+    this.container.querySelector('.site-content').style.display = 'none';
+    this.container.querySelector('#addSiteForm').style.display = 'block';
+  }
+
+  showEditForm() {
+    if (this.currentSiteInfo) {
+      this.container.querySelector('#companyNameInput').value = this.currentSiteInfo.company_name;
+      this.container.querySelector('#susRating').value = this.currentSiteInfo.sus_rating;
+      this.container.querySelector('#descriptionInput').value = this.currentSiteInfo.description;
+      this.container.querySelector('#alternativeLinks').value = this.currentSiteInfo.alternative_links.join('\n');
+      this.updateRatingDisplay();
+    }
+    this.showAddForm();
+  }
+
+  async handleRemove() {
+    if (!this.currentSiteInfo) return;
+    
+    if (confirm(`Remove ${this.currentSiteInfo.company_name} from radar?`)) {
+      const companyId = this.generateCompanyId(this.currentSiteInfo.company_name);
+      await siteInfoProvider.deleteSiteInfo(companyId);
+      
+      // Reload the popup content
+      const currentUrl = await this.getCurrentUrl();
+      const siteInfo = await siteInfoProvider.getSiteInfo(currentUrl);
+      this.render(siteInfo);
+      
+      // Reload current tab
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.reload(tabs[0].id);
+      });
+    }
+  }
+
+  async openManagePage() {
+    // Open the management page (all-entries) with focus on current site
+    const currentUrl = await this.getCurrentUrl();
+    const companyId = this.generateCompanyId(this.currentSiteInfo.company_name);
+    const allEntriesUrl = chrome.runtime.getURL(`all-entries.html?focus=${encodeURIComponent(companyId)}`);
+    window.open(allEntriesUrl, '_blank');
+  }
+
+  async showAllSites() {
+    // Open the all-entries page in a new tab
+    const allEntriesUrl = chrome.runtime.getURL('all-entries.html');
+    window.open(allEntriesUrl, '_blank');
+  }
+
+  hideForm() {
+    this.container.querySelector('.site-content').style.display = 'block';
+    this.container.querySelector('#addSiteForm').style.display = 'none';
+    
+    const form = this.container.querySelector('#siteForm');
+    if (form) form.reset();
+    this.updateRatingDisplay();
+  }
+
+  updateRatingDisplay() {
+    const rating = this.container.querySelector('#susRating')?.value || 3;
+    const display = this.container.querySelector('#ratingDisplay');
+    if (display) display.textContent = rating;
+  }
+
+  generateCompanyId(companyName) {
+    return companyName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+  }
+
+  async getCurrentUrl() {
+    return new Promise((resolve) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        resolve(tabs[0].url);
+      });
+    });
+  }
+
+  async handleFormSubmit(e) {
+    e.preventDefault();
+    
+    const companyName = this.container.querySelector('#companyNameInput').value;
+    const susRating = parseInt(this.container.querySelector('#susRating').value);
+    const description = this.container.querySelector('#descriptionInput').value;
+    const alternativeLinks = this.container.querySelector('#alternativeLinks').value
+      .split('\n')
+      .map(link => link.trim())
+      .filter(link => link.length > 0);
+    const additionalUrls = this.container.querySelector('#additionalUrls').value
+      .split('\n')
+      .map(url => url.trim())
+      .filter(url => url.length > 0);
+    
+    const companyId = this.generateCompanyId(companyName);
+    const currentUrl = await this.getCurrentUrl();
+    
+    // Check if this is editing an existing SusRadar entry
+    const existingSiteInfo = await siteInfoProvider.getSiteInfo(currentUrl);
+    const isModifyingOriginal = existingSiteInfo && existingSiteInfo.origin === 'susradar' && !existingSiteInfo.is_modified;
+    
+    const siteInfo = {
+      company_name: companyName,
+      sus_rating: susRating,
+      description: description,
+      alternative_links: alternativeLinks,
+      date_added: existingSiteInfo ? existingSiteInfo.date_added : new Date().toISOString(),
+      user_added: existingSiteInfo ? existingSiteInfo.user_added : true,
+      origin: existingSiteInfo ? existingSiteInfo.origin : 'user',
+      is_modified: isModifyingOriginal ? true : (existingSiteInfo ? existingSiteInfo.is_modified : false),
+      original_data: isModifyingOriginal ? {
+        company_name: existingSiteInfo.company_name,
+        sus_rating: existingSiteInfo.sus_rating,
+        description: existingSiteInfo.description,
+        alternative_links: existingSiteInfo.alternative_links
+      } : (existingSiteInfo ? existingSiteInfo.original_data : null)
+    };
+    
+    try {
+      await siteInfoProvider.addSiteInfo(currentUrl, companyId, siteInfo);
+      
+      for (const url of additionalUrls) {
+        await siteInfoProvider.addSiteInfo(url, companyId, siteInfo);
+      }
+      
+      this.hideForm();
+      
+      // Refresh the content
+      const updatedSiteInfo = await siteInfoProvider.getSiteInfo(currentUrl);
+      this.render(updatedSiteInfo);
+      
+      // Reload current tab
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.reload(tabs[0].id);
+      });
+      
+    } catch (error) {
+      console.error('Error saving site info:', error);
+      alert('Error saving site information. Please try again.');
+    }
+  }
+
+  close() {
+    window.close();
+  }
+}
+
+// Popup-specific code (moved to end to ensure classes are defined)
 let siteInfoProvider = null;
-let currentUrl = '';
-let currentSiteInfo = null;
+let dropdownComponent = null;
 
 function initializeProvider() {
     siteInfoProvider = new LocalStorageProvider();
@@ -14,209 +574,31 @@ async function getCurrentTab() {
     });
 }
 
-function showSiteInfo(siteInfo) {
-    document.getElementById('companyName').textContent = siteInfo.company_name;
-    
-    // Show rating section
-    const ratingSection = document.getElementById('ratingSection');
-    const ratingFill = document.getElementById('ratingFill');
-    const ratingDial = document.getElementById('ratingDial');
-    
-    ratingSection.style.display = 'block';
-    ratingFill.style.width = `${(siteInfo.sus_rating / 5) * 100}%`;
-    ratingDial.style.left = `${(siteInfo.sus_rating / 5) * 100}%`;
-    
-    // Show description
-    const descriptionEl = document.getElementById('description');
-    descriptionEl.innerHTML = siteInfo.description;
-    descriptionEl.style.display = 'block';
-    
-    // Show alternatives
-    const alternativesEl = document.getElementById('alternatives');
-    const alternativesList = document.getElementById('alternativesList');
-    
-    if (siteInfo.alternative_links && siteInfo.alternative_links.length > 0) {
-        alternativesList.innerHTML = '';
-        siteInfo.alternative_links.forEach(link => {
-            const li = document.createElement('li');
-            li.innerHTML = `<a href="${link}" target="_blank">${link}</a>`;
-            alternativesList.appendChild(li);
-        });
-        alternativesEl.style.display = 'block';
-    } else {
-        alternativesEl.style.display = 'none';
-    }
-    
-    // Hide not tracked message
-    document.getElementById('notTrackedMessage').style.display = 'none';
-    
-    // Show edit/remove buttons
-    document.getElementById('editBtn').style.display = 'block';
-    document.getElementById('removeBtn').style.display = 'block';
-    document.getElementById('addBtn').style.display = 'none';
-}
-
-function showNotTracked() {
-    const tab = document.getElementById('companyName');
-    try {
-        const url = new URL(currentUrl);
-        tab.textContent = url.hostname;
-    } catch (e) {
-        tab.textContent = 'Current Site';
-    }
-    
-    // Hide all site info sections
-    document.getElementById('ratingSection').style.display = 'none';
-    document.getElementById('description').style.display = 'none';
-    document.getElementById('alternatives').style.display = 'none';
-    
-    // Show not tracked message
-    document.getElementById('notTrackedMessage').style.display = 'block';
-    
-    // Show add button, hide edit/remove
-    document.getElementById('addBtn').style.display = 'block';
-    document.getElementById('editBtn').style.display = 'none';
-    document.getElementById('removeBtn').style.display = 'none';
-}
-
 async function loadCurrentSiteInfo() {
-    const tab = await getCurrentTab();
-    currentUrl = tab.url;
-    
-    currentSiteInfo = await siteInfoProvider.getSiteInfo(currentUrl);
-    
-    if (currentSiteInfo) {
-        showSiteInfo(currentSiteInfo);
-    } else {
-        showNotTracked();
-    }
-}
-
-function showAddSiteForm() {
-    document.getElementById('siteContent').style.display = 'none';
-    document.getElementById('addSiteForm').style.display = 'block';
-    
-    // If editing, fill form with current data
-    if (currentSiteInfo) {
-        document.getElementById('companyNameInput').value = currentSiteInfo.company_name;
-        document.getElementById('susRating').value = currentSiteInfo.sus_rating;
-        document.getElementById('descriptionInput').value = currentSiteInfo.description;
-        document.getElementById('alternativeLinks').value = currentSiteInfo.alternative_links.join('\n');
-        updateRatingDisplay();
-    }
-}
-
-function hideAddSiteForm() {
-    document.getElementById('siteContent').style.display = 'block';
-    document.getElementById('addSiteForm').style.display = 'none';
-    document.getElementById('allSitesView').style.display = 'none';
-    
-    // Reset form
-    document.getElementById('siteForm').reset();
-    document.getElementById('ratingDisplay').textContent = '3';
-}
-
-function updateRatingDisplay() {
-    const rating = document.getElementById('susRating').value;
-    document.getElementById('ratingDisplay').textContent = rating;
-}
-
-function generateCompanyId(companyName) {
-    return companyName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
-}
-
-async function handleFormSubmit(e) {
-    e.preventDefault();
-    
-    const companyName = document.getElementById('companyNameInput').value;
-    const susRating = parseInt(document.getElementById('susRating').value);
-    const description = document.getElementById('descriptionInput').value;
-    const alternativeLinks = document.getElementById('alternativeLinks').value
-        .split('\n')
-        .map(link => link.trim())
-        .filter(link => link.length > 0);
-    const additionalUrls = document.getElementById('additionalUrls').value
-        .split('\n')
-        .map(url => url.trim())
-        .filter(url => url.length > 0);
-    
-    const companyId = generateCompanyId(companyName);
-    
-    const siteInfo = {
-        company_name: companyName,
-        sus_rating: susRating,
-        description: description,
-        alternative_links: alternativeLinks,
-        date_added: new Date().toISOString(),
-        user_added: true
-    };
-    
     try {
-        await siteInfoProvider.addSiteInfo(currentUrl, companyId, siteInfo);
+        const tab = await getCurrentTab();
+        const currentUrl = tab.url;
         
-        // Add additional URLs
-        for (const url of additionalUrls) {
-            await siteInfoProvider.addSiteInfo(url, companyId, siteInfo);
-        }
+        const currentSiteInfo = await siteInfoProvider.getSiteInfo(currentUrl);
         
-        hideAddSiteForm();
-        await loadCurrentSiteInfo();
+        // Use the unified dropdown component
+        const container = document.getElementById('popup-dropdown');
+        dropdownComponent = new SusRadarDropdown(container, true);
         
-        // Reload the current tab to update content script
-        chrome.tabs.reload();
-        
-    } catch (error) {
-        console.error('Error saving site info:', error);
-        alert('Error saving site information. Please try again.');
-    }
-}
-
-async function handleRemoveSite() {
-    if (!currentSiteInfo) return;
-    
-    if (confirm(`Remove ${currentSiteInfo.company_name} from radar?`)) {
+        // Set the current hostname for the popup
         try {
-            const companyId = generateCompanyId(currentSiteInfo.company_name);
-            await siteInfoProvider.deleteSiteInfo(companyId);
-            
-            await loadCurrentSiteInfo();
-            chrome.tabs.reload();
-            
-        } catch (error) {
-            console.error('Error removing site:', error);
-            alert('Error removing site. Please try again.');
+            dropdownComponent.currentHostname = new URL(currentUrl).hostname;
+        } catch (e) {
+            dropdownComponent.currentHostname = 'Current Site';
         }
+        
+        dropdownComponent.render(currentSiteInfo);
+    } catch (error) {
+        console.error('SusRadar Popup: Error loading site info:', error);
+        // Show fallback content
+        const container = document.getElementById('popup-dropdown');
+        container.innerHTML = '<p>Error loading SusRadar. Please reload the extension.</p>';
     }
-}
-
-async function showAllSites() {
-    const data = await siteInfoProvider.getAllSites();
-    const companiesObj = data.companies;
-    const mappingsObj = data.mappings;
-    
-    const listEl = document.getElementById('allSitesList');
-    listEl.innerHTML = '';
-    
-    if (Object.keys(companiesObj).length === 0) {
-        listEl.innerHTML = '<p>No sites tracked yet.</p>';
-    } else {
-        Object.entries(companiesObj).forEach(([companyId, company]) => {
-            const urls = Object.keys(mappingsObj).filter(url => mappingsObj[url] === companyId);
-            
-            const entryEl = document.createElement('div');
-            entryEl.className = 'site-entry';
-            entryEl.innerHTML = `
-                <h4>${company.company_name}</h4>
-                <div class="rating rating-${company.sus_rating}">Sus Rating: ${company.sus_rating}/5</div>
-                <div class="urls">URLs: ${urls.join(', ')}</div>
-                <div class="description">${company.description}</div>
-            `;
-            listEl.appendChild(entryEl);
-        });
-    }
-    
-    document.getElementById('siteContent').style.display = 'none';
-    document.getElementById('allSitesView').style.display = 'block';
 }
 
 async function initializeData() {
@@ -229,21 +611,12 @@ async function initializeData() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    initializeProvider();
-    await initializeData();
-    await loadCurrentSiteInfo();
-    
-    // Button event listeners
-    document.getElementById('addBtn').addEventListener('click', showAddSiteForm);
-    document.getElementById('editBtn').addEventListener('click', showAddSiteForm);
-    document.getElementById('removeBtn').addEventListener('click', handleRemoveSite);
-    document.getElementById('viewAllBtn').addEventListener('click', showAllSites);
-    
-    // Form event listeners
-    document.getElementById('cancelForm').addEventListener('click', hideAddSiteForm);
-    document.getElementById('backToMain').addEventListener('click', hideAddSiteForm);
-    document.getElementById('siteForm').addEventListener('submit', handleFormSubmit);
-    document.getElementById('susRating').addEventListener('input', updateRatingDisplay);
-    
-    updateRatingDisplay();
+    try {
+        console.log('SusRadar Popup: Initializing...');
+        initializeProvider();
+        await initializeData();
+        await loadCurrentSiteInfo();
+    } catch (error) {
+        console.error('SusRadar Popup: Initialization error:', error);
+    }
 });
