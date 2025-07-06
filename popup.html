@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SusRadar</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div id="popup-dropdown" class="popup-dropdown">
+        <div class="susradar-header">
+            <h3 id="companyName" class="susradar-company-name">Loading...</h3>
+            <div class="control-buttons">
+                <button id="addBtn" class="control-btn" title="Add to Radar">➕</button>
+                <button id="editBtn" class="control-btn" title="Edit Entry" style="display: none;">✏️</button>
+                <button id="removeBtn" class="control-btn" title="Remove from Radar" style="display: none;">🗑️</button>
+                <button id="viewAllBtn" class="control-btn" title="View All Entries">📋</button>
+            </div>
+        </div>
+        
+        <div id="siteContent" class="site-content">
+            <div id="ratingSection" class="susradar-rating-container" style="display: none;">
+                <div class="susradar-rating-bar">
+                    <div id="ratingFill" class="susradar-rating-fill"></div>
+                    <div id="ratingDial" class="susradar-rating-dial"></div>
+                </div>
+                <div class="susradar-rating-labels">
+                    <span class="susradar-safe">Safe</span>
+                    <span class="susradar-sus">Sus AF</span>
+                </div>
+            </div>
+            
+            <div id="description" class="susradar-description" style="display: none;"></div>
+            
+            <div id="alternatives" class="susradar-alternatives" style="display: none;">
+                <h4>🌟 Better Companies:</h4>
+                <ul id="alternativesList"></ul>
+            </div>
+            
+            <div id="notTrackedMessage" class="not-tracked-message">
+                <p>🔍 Site not tracked yet</p>
+                <p>Click ➕ to add to radar!</p>
+            </div>
+        </div>
+        
+        <div id="addSiteForm" class="form-container" style="display: none;">
+            <h3>Add Site to Radar</h3>
+            <form id="siteForm">
+                <div class="form-group">
+                    <label for="companyNameInput">Company Name:</label>
+                    <input type="text" id="companyNameInput" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="susRating">Sus Rating (1-5):</label>
+                    <div class="rating-input">
+                        <input type="range" id="susRating" min="1" max="5" value="3">
+                        <span id="ratingDisplay">3</span>
+                        <div class="rating-labels">
+                            <span>Safe</span>
+                            <span>Sus AF</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="descriptionInput">Description:</label>
+                    <textarea id="descriptionInput" rows="3" placeholder="Why is this company sus?"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="alternativeLinks">Alternative Links (one per line):</label>
+                    <textarea id="alternativeLinks" rows="2" placeholder="https://better-alternative.com"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="additionalUrls">Additional URLs for this company:</label>
+                    <textarea id="additionalUrls" rows="2" placeholder="https://another-site.com (optional)"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" id="cancelForm" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+        
+        <div id="allSitesView" class="form-container" style="display: none;">
+            <h3>All Radar Entries</h3>
+            <div id="allSitesList"></div>
+            <button id="backToMain" class="btn btn-secondary">Back</button>
+        </div>
+    </div>
+    
+    <script src="src/core/interfaces.js"></script>
+    <script src="src/matching/ExactMatcher.js"></script>
+    <script src="src/storage/LocalStorageProvider.js"></script>
+    <script src="src/data/initialData.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

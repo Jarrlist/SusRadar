@@ -1,0 +1,388 @@
+body {
+    width: 320px;
+    min-height: 400px;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.popup-dropdown {
+    padding: 20px;
+    border-radius: 15px;
+    border: 2px solid #fff;
+}
+
+.susradar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.susradar-company-name {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    flex: 1;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 5px;
+    margin-left: 10px;
+}
+
+.control-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.site-content {
+    margin-bottom: 10px;
+}
+
+.susradar-rating-container {
+    margin-bottom: 15px;
+}
+
+.susradar-rating-bar {
+    position: relative;
+    height: 20px;
+    background: linear-gradient(to right, #4CAF50 0%, #FFC107 50%, #F44336 100%);
+    border-radius: 10px;
+    margin-bottom: 5px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.susradar-rating-fill {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.3);
+    transition: width 0.5s ease;
+}
+
+.susradar-rating-dial {
+    position: absolute;
+    top: -5px;
+    width: 8px;
+    height: 30px;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    transform: translateX(-50%);
+    transition: left 0.5s ease;
+}
+
+.susradar-rating-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.susradar-safe {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.susradar-sus {
+    color: #F44336;
+    font-weight: bold;
+}
+
+.susradar-description {
+    font-size: 14px;
+    line-height: 1.4;
+    margin-bottom: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 4px solid #FFC107;
+}
+
+.susradar-alternatives {
+    margin-top: 15px;
+}
+
+.susradar-alternatives h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #FFC107;
+}
+
+.susradar-alternatives ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.susradar-alternatives li {
+    margin-bottom: 5px;
+    padding: 5px 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    transition: all 0.2s ease;
+}
+
+.susradar-alternatives li:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(5px);
+}
+
+.susradar-alternatives a {
+    color: #B8E6B8;
+    text-decoration: none;
+    font-size: 12px;
+    display: block;
+}
+
+.susradar-alternatives a:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+.not-tracked-message {
+    text-align: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+}
+
+.not-tracked-message p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.form-container {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-top: 15px;
+}
+
+.form-container h3 {
+    margin: 0 0 15px 0;
+    color: #FFC107;
+    font-size: 16px;
+}
+
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #E8EAF6;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 11px;
+    box-sizing: border-box;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #FFC107;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.rating-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rating-input input[type="range"] {
+    flex: 1;
+    height: 4px;
+    background: linear-gradient(to right, #4CAF50 0%, #FFC107 50%, #F44336 100%);
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.rating-input input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.rating-input #ratingDisplay {
+    font-weight: bold;
+    font-size: 14px;
+    color: #FFC107;
+    min-width: 15px;
+}
+
+.rating-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    width: 100%;
+    margin-top: 3px;
+}
+
+.rating-labels span:first-child {
+    color: #4CAF50;
+}
+
+.rating-labels span:last-child {
+    color: #F44336;
+}
+
+.form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.btn {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    flex: 1;
+}
+
+.btn-primary {
+    background: #4CAF50;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #45a049;
+}
+
+.btn-secondary {
+    background: #2196F3;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #1976D2;
+}
+
+#allSitesList {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+}
+
+.site-entry {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    border-left: 3px solid #FFC107;
+}
+
+.site-entry h4 {
+    margin: 0 0 3px 0;
+    color: #FFC107;
+    font-size: 13px;
+}
+
+.site-entry .rating {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 9px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.site-entry .rating-1 { background: #4CAF50; }
+.site-entry .rating-2 { background: #8BC34A; }
+.site-entry .rating-3 { background: #FFC107; }
+.site-entry .rating-4 { background: #FF9800; }
+.site-entry .rating-5 { background: #F44336; }
+
+.site-entry .urls {
+    font-size: 9px;
+    opacity: 0.8;
+    margin-top: 3px;
+}
+
+.site-entry .description {
+    font-size: 10px;
+    line-height: 1.2;
+    margin-top: 3px;
+}
+
+::-webkit-scrollbar {
+    width: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+@keyframes susradar-bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    60% {
+        transform: translateY(-5px);
+    }
+}
+
+.susradar-rating-dial {
+    animation: susradar-bounce 2s infinite;
+}
