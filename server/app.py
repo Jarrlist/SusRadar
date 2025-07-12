@@ -17,7 +17,11 @@ import jwt
 import bcrypt
 
 app = Flask(__name__)
-CORS(app, origins=["chrome-extension://*"])
+# Configure CORS - allow Chrome extensions and local development
+CORS(app, 
+     origins=["chrome-extension://*", "http://localhost:*", "http://127.0.0.1:*", "http://raspberrypi.local:*"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"])
 
 # Configure logging
 log_handlers = [logging.StreamHandler()]
@@ -308,11 +312,18 @@ def delete_company(current_user, company_id):
 @app.before_request
 def log_request_info():
     logger.info(f"Request: {request.method} {request.url} from {request.remote_addr}")
-    if request.get_json():
-        # Don't log passwords
-        data = request.get_json()
-        safe_data = {k: v if k != 'password' else '***' for k, v in data.items()}
-        logger.info(f"Request body: {safe_data}")
+    logger.info(f"Request headers: {dict(request.headers)}")
+    
+    # Only try to parse JSON if there's actually content
+    if request.content_length and request.content_length > 0:
+        try:
+            data = request.get_json()
+            if data:
+                # Don't log passwords
+                safe_data = {k: v if k != 'password' else '***' for k, v in data.items()}
+                logger.info(f"Request body: {safe_data}")
+        except Exception as e:
+            logger.info(f"Could not parse request body as JSON: {e}")
 
 @app.after_request  
 def log_response_info(response):
