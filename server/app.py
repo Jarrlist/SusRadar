@@ -17,11 +17,12 @@ import jwt
 import bcrypt
 
 app = Flask(__name__)
-# Configure CORS - allow Chrome extensions and local development
+# Configure CORS - allow all origins for development
 CORS(app, 
-     origins=["chrome-extension://*", "http://localhost:*", "http://127.0.0.1:*", "http://raspberrypi.local:*"],
+     origins="*",
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization"])
+     allow_headers=["Content-Type", "Authorization", "Accept"],
+     supports_credentials=False)
 
 # Configure logging
 log_handlers = [logging.StreamHandler()]

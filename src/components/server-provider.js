@@ -86,8 +86,13 @@ class ServerProvider {
             }
         };
         
+        console.log('ServerProvider: Making request to:', url);
+        console.log('ServerProvider: Request options:', requestOptions);
+        console.log('ServerProvider: Request body:', options.body);
+        
         try {
             const response = await fetch(url, requestOptions);
+            console.log('ServerProvider: Response status:', response.status);
             
             if (response.status === 401) {
                 // Token expired or invalid
@@ -96,12 +101,26 @@ class ServerProvider {
             }
             
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                throw new Error(errorData.error || `HTTP ${response.status}`);
+                console.log('ServerProvider: Response not ok, status:', response.status);
+                const responseText = await response.text();
+                console.log('ServerProvider: Raw response text:', responseText);
+                
+                try {
+                    const errorData = JSON.parse(responseText);
+                    console.error('ServerProvider: Error response:', errorData);
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                } catch (parseError) {
+                    console.error('ServerProvider: Could not parse error response as JSON:', parseError);
+                    throw new Error(`HTTP ${response.status}: ${responseText}`);
+                }
             }
             
-            return await response.json();
+            const result = await response.json();
+            console.log('ServerProvider: Success response:', result);
+            return result;
         } catch (error) {
+            console.error('ServerProvider: Request failed:', error);
+            
             if (!this.isOnline) {
                 throw new Error('Server unavailable - working offline');
             }

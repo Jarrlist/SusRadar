@@ -187,9 +187,13 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
+    console.log('Settings: Starting registration process...');
+    
     const username = document.getElementById('registerUsername').value.trim();
     const password = document.getElementById('registerPassword').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    console.log('Settings: Registration data:', { username, passwordLength: password.length });
     
     if (!username || !password || !confirmPassword) {
         showAuthStatus('Please fill in all fields', 'error');
@@ -211,8 +215,11 @@ async function handleRegister() {
         return;
     }
     
+    console.log('Settings: Validation passed, calling serverProvider.register...');
+    
     try {
-        await serverProvider.register(username, password);
+        const result = await serverProvider.register(username, password);
+        console.log('Settings: Registration success:', result);
         showAuthStatus('Registration successful! You can now login.', 'success');
         
         // Clear form and switch to login
@@ -221,6 +228,7 @@ async function handleRegister() {
         document.getElementById('confirmPassword').value = '';
         toggleAuthForms('login');
     } catch (error) {
+        console.error('Settings: Registration error:', error);
         showAuthStatus(`Registration failed: ${error.message}`, 'error');
     }
 }
