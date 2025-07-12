@@ -214,91 +214,6 @@ class LocalStorageProvider extends SiteInfoProvider {
   }
 }
 
-// Initial data
-const INITIAL_DATA = {
-  url_mappings: {
-    "facebook.com": "meta_corp",
-    "www.facebook.com": "meta_corp",
-    "instagram.com": "meta_corp",
-    "www.instagram.com": "meta_corp",
-    "whatsapp.com": "meta_corp",
-    "www.whatsapp.com": "meta_corp",
-    "twitter.com": "x_corp",
-    "www.twitter.com": "x_corp",
-    "x.com": "x_corp",
-    "www.x.com": "x_corp",
-    "tiktok.com": "bytedance",
-    "www.tiktok.com": "bytedance"
-  },
-  company_data: {
-    "meta_corp": {
-      company_name: "Meta (Facebook)",
-      sus_rating: 4,
-      descriptions: {
-        usability: "🕵️ Cluttered interface with endless scrolling designed to maximize engagement. Algorithmic feeds prioritize sensational content over quality information.",
-        customer: "🛡️ Aggressive data collection, privacy violations, and spreading misinformation. Has been fined billions for privacy breaches and continues to track users across the web.",
-        political: "⚖️ Lobbies against privacy regulations, facilitates election interference, and amplifies extremist content for profit while claiming neutrality."
-      },
-      default_description: "customer",
-      description: "🛡️ Aggressive data collection, privacy violations, and spreading misinformation. Has been fined billions for privacy breaches and continues to track users across the web.",
-      alternative_links: [
-        "https://signal.org",
-        "https://mastodon.social",
-        "https://diasporafoundation.org",
-        "https://element.io"
-      ],
-      date_added: "2024-01-01T00:00:00.000Z",
-      user_added: false,
-      origin: "susradar",
-      is_modified: false,
-      original_data: null
-    },
-    "x_corp": {
-      company_name: "X (formerly Twitter)",
-      sus_rating: 4,
-      descriptions: {
-        usability: "🎭 Chaotic interface changes, broken verification system, and algorithmic timeline manipulation that prioritizes engagement over user experience.",
-        customer: "🛡️ Platform has become increasingly problematic with content moderation issues, bot accounts, and questionable leadership decisions affecting user safety and data privacy.",
-        political: "⚖️ Amplifies misinformation, suspends journalists critical of leadership, and has become a tool for political manipulation and extremist recruitment."
-      },
-      default_description: "political",
-      description: "⚖️ Amplifies misinformation, suspends journalists critical of leadership, and has become a tool for political manipulation and extremist recruitment.",
-      alternative_links: [
-        "https://mastodon.social",
-        "https://bsky.app",
-        "https://threads.net",
-        "https://counter.social"
-      ],
-      date_added: "2024-01-01T00:00:00.000Z",
-      user_added: false,
-      origin: "susradar",
-      is_modified: false,
-      original_data: null
-    },
-    "bytedance": {
-      company_name: "ByteDance (TikTok)",
-      sus_rating: 5,
-      descriptions: {
-        usability: "🚨 Addictive design optimized for maximum screen time. Infinite scroll with algorithm that learns user weaknesses to maximize engagement over wellbeing.",
-        customer: "🛡️ Chinese-owned app with serious data privacy concerns. Collects massive amounts of user data and has potential ties to Chinese government surveillance programs.",
-        political: "⚖️ Accused of censoring content critical of China, promoting pro-China propaganda, and potentially influencing elections through algorithmic manipulation of information flow."
-      },
-      default_description: "customer",
-      description: "🛡️ Chinese-owned app with serious data privacy concerns. Collects massive amounts of user data and has potential ties to Chinese government surveillance programs.",
-      alternative_links: [
-        "https://youtube.com/shorts",
-        "https://instagram.com/reels",
-        "https://triller.co",
-        "https://byte.co"
-      ],
-      date_added: "2024-01-01T00:00:00.000Z",
-      user_added: false,
-      origin: "susradar",
-      is_modified: false,
-      original_data: null
-    }
-  }
-};
 
 // Common Utilities
 const SusRadarUtils = {
@@ -327,11 +242,8 @@ const SusRadarUtils = {
 
   async initializeDefaultData(siteInfoProvider) {
     const data = await siteInfoProvider.getAllSites();
-    if (Object.keys(data.companies).length === 0) {
-      console.log('SusRadar: Loading initial data...');
-      for (const [url, companyId] of Object.entries(INITIAL_DATA.url_mappings)) {
-        await siteInfoProvider.addSiteInfo(url, companyId, INITIAL_DATA.company_data[companyId]);
-      }
-    }
+    console.log(`SusRadar: Starting with ${Object.keys(data.companies).length} companies from storage`);
+    // No default data loaded - users start with a clean slate
+    // Use "Backup Entries" and "Restore Entries" to manage data
   }
 };

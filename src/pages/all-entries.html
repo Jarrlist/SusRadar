@@ -82,6 +82,39 @@
             opacity: 0.8;
         }
 
+        .backup-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .backup-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .backup-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .backup-btn:active {
+            transform: translateY(0);
+        }
+
         .entries-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
@@ -791,6 +824,12 @@
             <span id="entryCount">Loading entries...</span>
             <span id="filterStatus"></span>
         </div>
+        <div class="backup-controls">
+            <button id="backupBtn" class="backup-btn" title="Export all entries to JSON file">📤 Backup Entries</button>
+            <button id="restoreBtn" class="backup-btn" title="Import entries from JSON file">📥 Restore Entries</button>
+            <a href="settings.html" class="backup-btn" title="Configure server settings and authentication">⚙️ Settings</a>
+            <input type="file" id="restoreFileInput" accept=".json" style="display: none;">
+        </div>
     </div>
 
     <div class="entries-container" id="entriesContainer">
@@ -916,6 +955,7 @@
 
     <script src="../components/common.js"></script>
     <script src="../components/ui-components.js"></script>
+    <script src="../components/server-provider.js"></script>
     <script src="all-entries.js"></script>
 </body>
 </html>

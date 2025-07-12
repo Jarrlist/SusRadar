@@ -5,8 +5,21 @@
 let siteInfoProvider = null;
 let dropdownComponent = null;
 
-function initializeProvider() {
-    siteInfoProvider = new LocalStorageProvider();
+async function initializeProvider() {
+    try {
+        const settings = await chrome.storage.local.get(['susradar_token', 'susradar_server_url']);
+        
+        if (settings.susradar_token && settings.susradar_server_url) {
+            console.log('Popup: Using server provider');
+            siteInfoProvider = new ServerProvider(settings.susradar_server_url);
+        } else {
+            console.log('Popup: Using local storage provider');
+            siteInfoProvider = new LocalStorageProvider();
+        }
+    } catch (error) {
+        console.warn('Popup: Error checking server settings, falling back to local storage:', error);
+        siteInfoProvider = new LocalStorageProvider();
+    }
 }
 
 async function getCurrentTab() {
@@ -292,7 +305,7 @@ class SusRadarDropdown {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         console.log('SusRadar Popup: Initializing...');
-        initializeProvider();
+        await initializeProvider();
         await initializeData();
         await loadCurrentSiteInfo();
     } catch (error) {

@@ -2,25 +2,46 @@
 // Uses shared modules: common.js and ui-components.js
 
 // Global variables
-let siteInfoProvider = new LocalStorageProvider();
+let siteInfoProvider = null;
 let allEntries = [];
 let filteredEntries = [];
 let focusedCompanyId = null;
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize provider
+    await initializeProvider();
+    
     // Check for focus parameter
     const urlParams = new URLSearchParams(window.location.search);
     focusedCompanyId = urlParams.get('focus');
     
     await loadAllEntries();
     setupSearch();
+    setupBackupRestore();
     
     // Scroll to focused entry if specified (called after render is complete)
     if (focusedCompanyId) {
         highlightFocusedEntry();
     }
 });
+
+async function initializeProvider() {
+    try {
+        const settings = await chrome.storage.local.get(['susradar_token', 'susradar_server_url']);
+        
+        if (settings.susradar_token && settings.susradar_server_url) {
+            console.log('All Entries: Using server provider');
+            siteInfoProvider = new ServerProvider(settings.susradar_server_url);
+        } else {
+            console.log('All Entries: Using local storage provider');
+            siteInfoProvider = new LocalStorageProvider();
+        }
+    } catch (error) {
+        console.warn('All Entries: Error checking server settings, falling back to local storage:', error);
+        siteInfoProvider = new LocalStorageProvider();
+    }
+}
 
 async function loadAllEntries() {
     try {
@@ -796,5 +817,186 @@ async function removeUrlFromEntry(companyId, urlToRemove) {
     } catch (error) {
         console.error('Error removing URL:', error);
         alert('Error removing URL. Please try again.');
+    }
+}
+
+// Backup and Restore Functionality
+function setupBackupRestore() {
+    const backupBtn = document.getElementById('backupBtn');
+    const restoreBtn = document.getElementById('restoreBtn');
+    const restoreFileInput = document.getElementById('restoreFileInput');
+
+    // Backup functionality
+    backupBtn.addEventListener('click', async () => {
+        await exportEntries();
+    });
+
+    // Restore functionality
+    restoreBtn.addEventListener('click', () => {
+        restoreFileInput.click();
+    });
+
+    restoreFileInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            await importEntries(file);
+            // Reset the input so the same file can be selected again
+            event.target.value = '';
+        }
+    });
+}
+
+async function exportEntries() {
+    try {
+        console.log('SusRadar: Starting backup export...');
+        
+        // Get all current data
+        const data = await siteInfoProvider.getAllSites();
+        
+        // Create backup object with metadata
+        const backup = {
+            metadata: {
+                exportedAt: new Date().toISOString(),
+                version: "1.0",
+                extensionName: "SusRadar",
+                totalCompanies: Object.keys(data.companies).length,
+                totalUrls: Object.keys(data.mappings).length
+            },
+            data: {
+                url_mappings: data.mappings,
+                company_data: data.companies
+            }
+        };
+
+        // Create filename with timestamp
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+        const filename = `susradar-backup-${timestamp}.json`;
+
+        // Convert to JSON with nice formatting
+        const jsonString = JSON.stringify(backup, null, 2);
+        
+        // Create download
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        console.log(`SusRadar: Backup exported successfully as ${filename}`);
+        
+        // Show success message
+        const successMsg = document.createElement('div');
+        successMsg.innerHTML = `
+            <strong>✅ Backup Created!</strong><br>
+            <small>Exported ${backup.metadata.totalCompanies} companies and ${backup.metadata.totalUrls} URLs</small>
+        `;
+        successMsg.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            max-width: 300px;
+        `;
+        document.body.appendChild(successMsg);
+        setTimeout(() => {
+            successMsg.remove();
+        }, 4000);
+        
+    } catch (error) {
+        console.error('SusRadar: Backup export failed:', error);
+        alert('Failed to export backup. Please try again.');
+    }
+}
+
+async function importEntries(file) {
+    try {
+        console.log('SusRadar: Starting backup import...');
+        
+        // Read file
+        const text = await file.text();
+        const backup = JSON.parse(text);
+        
+        // Validate backup structure
+        if (!backup.data || !backup.data.company_data || !backup.data.url_mappings) {
+            throw new Error('Invalid backup file format');
+        }
+        
+        // Show confirmation dialog with backup info
+        const metadata = backup.metadata || {};
+        const companyCount = Object.keys(backup.data.company_data).length;
+        const urlCount = Object.keys(backup.data.url_mappings).length;
+        const exportDate = metadata.exportedAt ? new Date(metadata.exportedAt).toLocaleString() : 'Unknown';
+        
+        const confirmMessage = `Import SusRadar backup?
+
+📊 Backup Info:
+• ${companyCount} companies
+• ${urlCount} URLs  
+• Exported: ${exportDate}
+
+⚠️ Warning: This will REPLACE all current entries!
+Your existing data will be permanently lost.
+
+Do you want to continue?`;
+
+        if (!confirm(confirmMessage)) {
+            console.log('SusRadar: Import cancelled by user');
+            return;
+        }
+        
+        // Import the data
+        await siteInfoProvider._saveData(backup.data);
+        
+        console.log(`SusRadar: Import completed - ${companyCount} companies, ${urlCount} URLs`);
+        
+        // Reload the page to show imported data
+        await loadAllEntries();
+        
+        // Show success message
+        const successMsg = document.createElement('div');
+        successMsg.innerHTML = `
+            <strong>✅ Backup Restored!</strong><br>
+            <small>Imported ${companyCount} companies and ${urlCount} URLs</small>
+        `;
+        successMsg.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2196F3;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            max-width: 300px;
+        `;
+        document.body.appendChild(successMsg);
+        setTimeout(() => {
+            successMsg.remove();
+        }, 4000);
+        
+    } catch (error) {
+        console.error('SusRadar: Import failed:', error);
+        
+        let errorMessage = 'Failed to import backup.';
+        if (error.message.includes('JSON')) {
+            errorMessage = 'Invalid JSON file. Please select a valid SusRadar backup file.';
+        } else if (error.message.includes('Invalid backup')) {
+            errorMessage = 'Invalid backup file format. Please select a valid SusRadar backup file.';
+        }
+        
+        alert(errorMessage + '\n\nPlease try again with a valid backup file.');
     }
 }
