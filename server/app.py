@@ -8,6 +8,7 @@ import os
 import json
 import hashlib
 import secrets
+import logging
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory
@@ -18,13 +19,29 @@ import bcrypt
 app = Flask(__name__)
 CORS(app, origins=["chrome-extension://*"])
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('./logs/susradar.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
 # Configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config['DATA_DIR'] = os.environ.get('DATA_DIR', './data')
 app.config['JWT_EXPIRATION_HOURS'] = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))
 
-# Ensure data directory exists
+# Ensure directories exist
 os.makedirs(app.config['DATA_DIR'], exist_ok=True)
+os.makedirs('./logs', exist_ok=True)
+
+logger.info("SusRadar server starting up...")
+logger.info(f"Data directory: {app.config['DATA_DIR']}")
+logger.info(f"JWT expiration: {app.config['JWT_EXPIRATION_HOURS']} hours")
 
 class DataManager:
     """Handles file-based JSON storage for user data"""
@@ -105,74 +122,116 @@ def health_check():
 @app.route('/api/register', methods=['POST'])
 def register():
     """Register a new user"""
-    data = request.get_json()
-    if not data or not data.get('username') or not data.get('password'):
-        return jsonify({'error': 'Username and password required'}), 400
+    logger.info(f"Registration attempt from {request.remote_addr}")
     
-    username = data['username'].lower().strip()
-    password = data['password']
-    
-    # Validate username (alphanumeric + underscore, 3-30 chars)
-    if not username.replace('_', '').isalnum() or len(username) < 3 or len(username) > 30:
-        return jsonify({'error': 'Username must be 3-30 characters, alphanumeric and underscore only'}), 400
-    
-    # Validate password (minimum 8 characters)
-    if len(password) < 8:
-        return jsonify({'error': 'Password must be at least 8 characters long'}), 400
-    
-    users = data_manager.load_users()
-    
-    if username in users:
-        return jsonify({'error': 'Username already exists'}), 409
-    
-    # Hash password
-    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
-    # Save user
-    users[username] = {
-        'password_hash': password_hash,
-        'created_at': datetime.utcnow().isoformat(),
-        'last_login': None
-    }
-    data_manager.save_users(users)
-    
-    # Initialize empty user data
-    data_manager.save_user_data(username, {"companies": {}, "mappings": {}})
-    
-    return jsonify({'message': 'User registered successfully'}), 201
+    try:
+        data = request.get_json()
+        logger.info(f"Received registration data: {data}")
+        
+        if not data or not data.get('username') or not data.get('password'):
+            logger.warning("Registration failed: Missing username or password")
+            return jsonify({'error': 'Username and password required'}), 400
+        
+        username = data['username'].lower().strip()
+        password = data['password']
+        
+        logger.info(f"Registration attempt for username: {username}")
+        
+        # Validate username (alphanumeric + underscore, 3-30 chars)
+        if not username.replace('_', '').isalnum() or len(username) < 3 or len(username) > 30:
+            logger.warning(f"Registration failed: Invalid username format: {username}")
+            return jsonify({'error': 'Username must be 3-30 characters, alphanumeric and underscore only'}), 400
+        
+        # Validate password (minimum 8 characters)
+        if len(password) < 8:
+            logger.warning(f"Registration failed: Password too short for user: {username}")
+            return jsonify({'error': 'Password must be at least 8 characters long'}), 400
+        
+        logger.info("Loading existing users...")
+        users = data_manager.load_users()
+        logger.info(f"Found {len(users)} existing users")
+        
+        if username in users:
+            logger.warning(f"Registration failed: Username already exists: {username}")
+            return jsonify({'error': 'Username already exists'}), 409
+        
+        logger.info(f"Hashing password for user: {username}")
+        # Hash password
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        logger.info(f"Saving user data for: {username}")
+        # Save user
+        users[username] = {
+            'password_hash': password_hash,
+            'created_at': datetime.utcnow().isoformat(),
+            'last_login': None
+        }
+        data_manager.save_users(users)
+        
+        logger.info(f"Initializing empty data for user: {username}")
+        # Initialize empty user data
+        data_manager.save_user_data(username, {"companies": {}, "mappings": {}})
+        
+        logger.info(f"Registration successful for user: {username}")
+        return jsonify({'message': 'User registered successfully'}), 201
+        
+    except Exception as e:
+        logger.error(f"Registration error: {str(e)}", exc_info=True)
+        return jsonify({'error': f'Registration failed: {str(e)}'}), 500
 
 @app.route('/api/login', methods=['POST'])
 def login():
     """Authenticate user and return JWT token"""
-    data = request.get_json()
-    if not data or not data.get('username') or not data.get('password'):
-        return jsonify({'error': 'Username and password required'}), 400
+    logger.info(f"Login attempt from {request.remote_addr}")
     
-    username = data['username'].lower().strip()
-    password = data['password']
-    
-    users = data_manager.load_users()
-    user = users.get(username)
-    
-    if not user or not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
-        return jsonify({'error': 'Invalid credentials'}), 401
-    
-    # Update last login
-    user['last_login'] = datetime.utcnow().isoformat()
-    data_manager.save_users(users)
-    
-    # Generate JWT token
-    token_payload = {
-        'username': username,
-        'exp': datetime.utcnow() + timedelta(hours=app.config['JWT_EXPIRATION_HOURS'])
-    }
-    token = jwt.encode(token_payload, app.config['SECRET_KEY'], algorithm='HS256')
-    
-    return jsonify({
-        'token': token,
-        'username': username,
-        'expires_in': app.config['JWT_EXPIRATION_HOURS'] * 3600
-    })
+    try:
+        data = request.get_json()
+        logger.info(f"Received login data: {data}")
+        
+        if not data or not data.get('username') or not data.get('password'):
+            logger.warning("Login failed: Missing username or password")
+            return jsonify({'error': 'Username and password required'}), 400
+        
+        username = data['username'].lower().strip()
+        password = data['password']
+        
+        logger.info(f"Login attempt for username: {username}")
+        
+        users = data_manager.load_users()
+        user = users.get(username)
+        
+        if not user:
+            logger.warning(f"Login failed: User not found: {username}")
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        if not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+            logger.warning(f"Login failed: Invalid password for user: {username}")
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        logger.info(f"Login successful for user: {username}")
+        
+        # Update last login
+        user['last_login'] = datetime.utcnow().isoformat()
+        data_manager.save_users(users)
+        
+        # Generate JWT token
+        token_payload = {
+            'username': username,
+            'exp': datetime.utcnow() + timedelta(hours=app.config['JWT_EXPIRATION_HOURS'])
+        }
+        token = jwt.encode(token_payload, app.config['SECRET_KEY'], algorithm='HS256')
+        
+        logger.info(f"JWT token generated for user: {username}")
+        
+        return jsonify({
+            'token': token,
+            'username': username,
+            'expires_in': app.config['JWT_EXPIRATION_HOURS'] * 3600
+        })
+        
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}", exc_info=True)
+        return jsonify({'error': f'Login failed: {str(e)}'}), 500
 
 @app.route('/api/data', methods=['GET'])
 @token_required
@@ -240,12 +299,28 @@ def delete_company(current_user, company_id):
     
     return jsonify({'message': 'Company deleted successfully'})
 
+@app.before_request
+def log_request_info():
+    logger.info(f"Request: {request.method} {request.url} from {request.remote_addr}")
+    if request.get_json():
+        # Don't log passwords
+        data = request.get_json()
+        safe_data = {k: v if k != 'password' else '***' for k, v in data.items()}
+        logger.info(f"Request body: {safe_data}")
+
+@app.after_request  
+def log_response_info(response):
+    logger.info(f"Response: {response.status_code}")
+    return response
+
 @app.errorhandler(404)
 def not_found(error):
+    logger.warning(f"404 error: {request.url} not found")
     return jsonify({'error': 'Endpoint not found'}), 404
 
 @app.errorhandler(500)
 def internal_error(error):
+    logger.error(f"500 error: {str(error)}", exc_info=True)
     return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':

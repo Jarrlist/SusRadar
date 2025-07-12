@@ -105,6 +105,17 @@ class ServerProvider {
             if (!this.isOnline) {
                 throw new Error('Server unavailable - working offline');
             }
+            
+            // Handle network errors
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new Error('Cannot connect to server - check URL and ensure server is running');
+            }
+            
+            // Handle timeout errors
+            if (error.name === 'AbortError') {
+                throw new Error('Request timed out - server may be slow or unreachable');
+            }
+            
             throw error;
         }
     }

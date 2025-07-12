@@ -253,8 +253,8 @@ function updateAuthenticationUI() {
         document.getElementById('loginPassword').value = '';
     } else {
         userInfo.style.display = 'none';
-        loginForm.style.display = 'block';
-        registerForm.style.display = 'none';
+        loginForm.style.display = '';
+        registerForm.style.display = '';
         loginForm.classList.add('active');
         registerForm.classList.remove('active');
     }
