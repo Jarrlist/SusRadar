@@ -20,13 +20,20 @@ app = Flask(__name__)
 CORS(app, origins=["chrome-extension://*"])
 
 # Configure logging
+log_handlers = [logging.StreamHandler()]
+
+# Try to add file handler, but don't fail if directory doesn't exist or isn't writable
+try:
+    os.makedirs('./logs', exist_ok=True)
+    log_handlers.append(logging.FileHandler('./logs/susradar.log'))
+    print("File logging enabled")
+except (PermissionError, OSError) as e:
+    print(f"File logging disabled due to: {e}")
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('./logs/susradar.log'),
-        logging.StreamHandler()
-    ]
+    handlers=log_handlers
 )
 logger = logging.getLogger(__name__)
 
@@ -35,9 +42,8 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config['DATA_DIR'] = os.environ.get('DATA_DIR', './data')
 app.config['JWT_EXPIRATION_HOURS'] = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))
 
-# Ensure directories exist
+# Ensure data directory exists
 os.makedirs(app.config['DATA_DIR'], exist_ok=True)
-os.makedirs('./logs', exist_ok=True)
 
 logger.info("SusRadar server starting up...")
 logger.info(f"Data directory: {app.config['DATA_DIR']}")
