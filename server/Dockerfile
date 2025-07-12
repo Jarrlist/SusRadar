@@ -16,12 +16,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create directories
-RUN mkdir -p /app/data /app/logs
-
-# Create non-root user for security
+# Create non-root user for security first
 RUN groupadd -r susradar && useradd -r -g susradar susradar
+
+# Create directories and set permissions
+RUN mkdir -p /app/data /app/logs
 RUN chown -R susradar:susradar /app
+RUN chmod -R 755 /app/data /app/logs
+
 USER susradar
 
 # Expose port

@@ -216,6 +216,7 @@ async function handleRegister() {
     }
     
     console.log('Settings: Validation passed, calling serverProvider.register...');
+    console.log('Settings: Server URL is:', serverProvider.getServerUrl());
     
     try {
         const result = await serverProvider.register(username, password);
