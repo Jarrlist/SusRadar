@@ -14,8 +14,8 @@ services:
       - JWT_EXPIRATION_HOURS=24
       - PORT=5000
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+      - susradar-data:/app/data
+      - susradar-logs:/app/logs
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
       interval: 30s
@@ -31,4 +31,6 @@ networks:
 
 volumes:
   susradar-data:
+    driver: local
+  susradar-logs:
     driver: local
